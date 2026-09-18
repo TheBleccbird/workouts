@@ -189,6 +189,7 @@ function impostaComandiMedia(){
 }
 // titolo e avanzamento nella notifica / schermata di blocco
 function aggiornaMedia(){
+  coloreBarra();
   if(!('mediaSession' in navigator) || !runEl.classList.contains('on')) return;
   const ms = navigator.mediaSession, s = R.q[R.i];
   try{
@@ -273,6 +274,22 @@ function adattaNome(t){
   const daAltezza = alt * .075;
   const px = Math.max(20, Math.min(daParola, daTotale, Math.max(30, daAltezza), 62));
   n.style.fontSize = px.toFixed(1) + 'px';
+  rientra();
+}
+
+// stima corretta con le misure vere: riduco finché nessuna parola va spezzata
+// e il blocco centrale sta tutto nello schermo
+function rientra(){
+  const n = el('nome'), c = document.querySelector('.centro');
+  if(!runEl.classList.contains('on') || !n.clientWidth) return;
+  let px = parseFloat(n.style.fontSize) || 36;
+  n.style.overflowWrap = 'normal';
+  for(let k = 0; k < 30 && px > 18; k++){
+    if(n.scrollWidth <= n.clientWidth + 1 && c.scrollHeight <= c.clientHeight + 1) break;
+    px -= 1.5;
+    n.style.fontSize = px.toFixed(1) + 'px';
+  }
+  n.style.overflowWrap = '';
 }
 
 const R = {q:[], i:0, fineA:0, rimasti:0, inPausa:false, tick:null, sec:null, sess:null, avvio:0, su:false,
@@ -282,21 +299,38 @@ const runEl = el('run');
 
 // opz.poi: sessione da fare dopo (riscaldamento concatenato)
 // opz.riscMs/riscAvvio: tempo del riscaldamento appena fatto, da sommare a questa sessione
+// opz.ripresa: stato salvato di una sessione interrotta (vedi RIPRESA)
 function apri(sess, opz = {}){
-  R.sess = sess; R.q = costruisci(sess); R.i = 0; R.inPausa = false; R.avvio = Date.now();
-  R.poi = opz.poi || null; R.riscMs = opz.riscMs || 0; R.riscAvvio = opz.riscAvvio || 0;
-  R.pausaTot = 0; R.fatti = new Set(); R.salvato = false;
+  // c'era una sessione interrotta e ne inizio un'altra: la prima va nello storico
+  if(!opz.ripresa){ const vecchia = leggiRipresa(); if(vecchia) archiviaRipresa(vecchia); }
+  prepara(sess, opz);
   el('pausa').textContent = 'Pausa';
   runEl.classList.add('on'); runEl.classList.remove('pausa');
   document.body.style.overflow = 'hidden';
+  el('avviso-ripresa').hidden = true;
   initAudio(); wake(); avviaVivo();
-  vaiA(0);
+  vaiA(R.i);
+}
+
+function prepara(sess, opz){
+  R.sess = sess; R.q = costruisci(sess); R.i = 0; R.inPausa = false; R.avvio = Date.now(); R.fine = 0;
+  R.poi = opz.poi || null; R.riscMs = opz.riscMs || 0; R.riscAvvio = opz.riscAvvio || 0;
+  R.pausaTot = 0; R.fatti = new Set(); R.salvato = false;
+  const rip = opz.ripresa;
+  if(rip){
+    // il tempo passato ad app chiusa conta come pausa
+    R.avvio = rip.avvio;
+    R.pausaTot = rip.pausaTot + Math.max(0, Date.now() - rip.ts);
+    R.fatti = new Set(rip.fatti);
+    R.i = Math.max(0, Math.min(rip.i, R.q.length - 2));
+  }
 }
 
 function chiudi(){
   clearInterval(R.tick); R.tick = null;
-  annullaBip(); fermaVivo();
+  annullaBip(); fermaVivo(); cancellaRipresa();
   runEl.classList.remove('on'); document.body.style.overflow = '';
+  coloreBarra();
   try{ speechSynthesis.cancel(); }catch(e){}
   rilasciaWake();
 }
@@ -338,7 +372,9 @@ function vaiA(i, opz = {}){
       if(!giaSuonato) bipFine();
       parla('Allenamento completato. Bravo.');
     }
+    rientra();
     aggiornaMedia();
+    cancellaRipresa();
     salvaFatto(false);
     return;
   }
@@ -387,8 +423,10 @@ function vaiA(i, opz = {}){
   }
 
   disegna();
+  rientra();
   programmaBip();
   aggiornaMedia();
+  salvaRipresa();
   R.tick = setInterval(passo, 120);
 }
 
@@ -403,6 +441,7 @@ function prossimoTesto(s){
 
 function passo(){
   controllaVivo();
+  if(Date.now() - (R.ultimaRipresa || 0) > 5000) salvaRipresa();
   if(R.inPausa) return;
   const s = R.q[R.i];
   if(R.manuale){
@@ -439,7 +478,7 @@ function formatta(sec){
 function parlaTempo(t){ return t >= 60 ? Math.round(t/60) + ' minuti' : t + ' secondi'; }
 // tempo reale di allenamento in ms, pause escluse
 function tempoEffettivo(){
-  const ora = Date.now();
+  const ora = R.fine || Date.now();   // R.fine: fine nota di una sessione interrotta
   return ora - R.avvio - R.pausaTot - (R.inPausa ? ora - (R.pausaDa || ora) : 0);
 }
 function durataTot(){
@@ -471,6 +510,88 @@ document.addEventListener('visibilitychange', () => {
   if(!R.inPausa && !R.manuale) programmaBip();
   disegna(); aggiornaMedia();
 });
+
+/* barra di stato di Android dello stesso colore dello schermo */
+const metaTema = document.querySelector('meta[name="theme-color"]');
+function coloreBarra(){
+  const on = runEl.classList.contains('on'), st = runEl.dataset.stato;
+  metaTema.content = !on ? '#16181B' : R.inPausa ? '#2C2F33'
+    : st === 'work' ? '#D93F1D' : st === 'rest' ? '#1E5C56' : '#16181B';
+}
+
+/* ============ RIPRESA ============
+   Lo stato della sessione in corso sta in localStorage (scrittura sincrona:
+   sopravvive anche se Android chiude l'app di colpo). Al riavvio propongo
+   di riprendere; dopo 6 ore la registro come parziale.                    */
+const CHIAVE_RIPRESA = 'lg2_inCorso';
+const RIPRESA_MAX = 6 * 3600e3;
+
+function sessioneDaId(id){
+  if(!id) return null;
+  if(/^sbarra[123]$/.test(id)) return sbarraSess(+id.slice(6));
+  return [RISC, SESS_A, SESS_B, STRETCH].find(x => x.id === id) || null;
+}
+function salvaRipresa(){
+  if(!runEl.classList.contains('on') || !R.sess) return;
+  const s = R.q[R.i];
+  if(!s || s.type === 'done') return cancellaRipresa();
+  const ora = Date.now();
+  R.ultimaRipresa = ora;
+  try{
+    localStorage.setItem(CHIAVE_RIPRESA, JSON.stringify({
+      sessId:R.sess.id, poiId:R.poi ? R.poi.id : null, i:R.i, avvio:R.avvio,
+      pausaTot:R.pausaTot + (R.inPausa ? ora - (R.pausaDa || ora) : 0),
+      fatti:[...R.fatti], riscMs:R.riscMs, riscAvvio:R.riscAvvio, ts:ora
+    }));
+  }catch(e){}
+}
+function cancellaRipresa(){ try{ localStorage.removeItem(CHIAVE_RIPRESA); }catch(e){} }
+function leggiRipresa(){
+  try{
+    const r = JSON.parse(localStorage.getItem(CHIAVE_RIPRESA));
+    return r && sessioneDaId(r.sessId) && Array.isArray(r.fatti) ? r : null;
+  }catch(e){ return null; }
+}
+const opzRipresa = r => ({ripresa:r, poi:sessioneDaId(r.poiId), riscMs:r.riscMs || 0, riscAvvio:r.riscAvvio || 0});
+
+// registra come parziale una sessione interrotta, con la sua ora di fine vera.
+// salvaFatto costruisce il record in modo sincrono, quindi subito dopo R è di nuovo libero
+function archiviaRipresa(r){
+  cancellaRipresa();
+  prepara(sessioneDaId(r.sessId), opzRipresa(r));
+  R.pausaTot = r.pausaTot;
+  R.fine = r.ts;
+  const fatto = salvaFatto(true);
+  R.fine = 0;
+  return fatto;
+}
+
+async function controllaRipresa(){
+  const r = leggiRipresa();
+  if(!r){ cancellaRipresa(); return; }
+  if(Date.now() - r.ts > RIPRESA_MAX) return archiviaRipresa(r);
+  const sess = sessioneDaId(r.sessId);
+  const q = costruisci(sess);
+  let w = q[Math.min(r.i, q.length - 1)];
+  // se era in un riposo indico l'esercizio che viene dopo
+  for(let j = r.i; j < q.length && w.type !== 'work'; j++) w = q[j];
+  const d = new Date(r.ts);
+  const ieri = new Date(); ieri.setDate(ieri.getDate() - 1);
+  const quando = d.toDateString() === new Date().toDateString() ? 'alle ' + oraDi(d)
+    : d.toDateString() === ieri.toDateString() ? 'ieri alle ' + oraDi(d) : dataBreve(d) + ' ' + oraDi(d);
+  el('ripresa-testo').innerHTML = `<b>${esc(sess.nome)} interrotta ${quando}</b>`
+    + (w && w.type === 'work' ? `Riparti da ${esc(w.e.n)} · esercizio ${w.n}/${w.tot}${w.giri > 1 ? ', giro ' + w.giro + '/' + w.giri : ''}` : '');
+  el('btn-scarta').textContent = r.fatti.length ? 'Chiudi e salva' : 'Scarta';
+  el('avviso-ripresa').hidden = false;
+  el('btn-riprendi').onclick = () => { const x = leggiRipresa(); if(x) apri(sessioneDaId(x.sessId), opzRipresa(x)); };
+  el('btn-scarta').onclick = async () => {
+    el('avviso-ripresa').hidden = true;
+    const x = leggiRipresa(); if(x) await archiviaRipresa(x);
+  };
+}
+// se Android sospende o chiude l'app, lo stato è già salvato
+window.addEventListener('pagehide', salvaRipresa);
+document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden') salvaRipresa(); });
 
 /* comandi */
 el('avanti').onclick = () => {
@@ -504,6 +625,7 @@ el('pausa').onclick = () => {
     programmaBip();
   }
   aggiornaMedia();
+  salvaRipresa();
 };
 // Esci: se c'è almeno un esercizio fatto la sessione finisce nello storico come parziale
 function esci(){
@@ -681,7 +803,7 @@ async function salvaFatto(parziale){
   R.salvato = true;
   const lavori = R.q.filter(x => x.type === 'work');
   const rec = {
-    d: new Date().toISOString(),
+    d: new Date(R.fine || Date.now()).toISOString(),
     inizio: new Date(R.riscAvvio || R.avvio).toISOString(),
     sessId: R.sess.id, nome: R.sess.nome, tipo: tipoSess(R.sess.id), fase: faseSess(R.sess.id),
     min: Math.max(1, Math.round((tempoEffettivo() + R.riscMs) / 60000)),
@@ -729,10 +851,13 @@ async function segnaFase(fase){
   FASI = await DB.tutte('fasi').catch(() => []);
   // prima volta: segno la fase di partenza della sbarra
   if(!FASI.length) segnaFase(S.fase);
+  await controllaRipresa();
   DB.persistente().then(p => { PERSISTENTE = p; disegnaStatoDati(); });
   disegnaOggi(); disegnaSettimana(); disegnaLista(); disegnaStorico();
   initStorico();
-  window.addEventListener('resize', () => { if(runEl.classList.contains('on')) adattaNome(el('nome').textContent); });
+  const riadatta = () => { if(runEl.classList.contains('on')) adattaNome(el('nome').textContent); };
+  window.addEventListener('resize', riadatta);
+  if(document.fonts) document.fonts.ready.then(riadatta);
 })();
 
 /* ============ SERVICE WORKER ============ */
