@@ -499,64 +499,6 @@ function disegnaOggi(){
   }
 }
 
-/* ---- storico ---- */
-let LOG = [];          // sessioni dalla più recente
-let PERSISTENTE = false;
-function disegnaStorico(){
-  const box = el('storico');
-  const ora = Date.now();
-  const ultimi7 = LOG.filter(x => ora - new Date(x.d).getTime() < 7 * 864e5).length;
-  const ultimi30 = LOG.filter(x => ora - new Date(x.d).getTime() < 30 * 864e5).length;
-  const minuti = LOG.filter(x => ora - new Date(x.d).getTime() < 30 * 864e5).reduce((a, x) => a + (x.min || 0), 0);
-  let html = `<div class="conteggio">
-      <div><strong>${ultimi7}</strong><em>ultimi 7 giorni</em></div>
-      <div><strong>${ultimi30}</strong><em>ultimi 30 giorni</em></div>
-      <div><strong>${minuti}</strong><em>minuti nel mese</em></div>
-    </div>`;
-  if(!LOG.length){
-    html += `<p class="vuoto">Nessuna sessione registrata.<br>Quando arrivi in fondo a una sessione finisce qui dentro.</p>`;
-  }else{
-    html += LOG.slice(0, 12).map(x => {
-      const d = new Date(x.d);
-      const g = NOMI_G[(d.getDay() + 6) % 7].slice(0, 3).toLowerCase();
-      const data = d.getDate() + '/' + (d.getMonth() + 1);
-      const ora = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
-      const parz = x.parziale ? ' · parziale' + (x.arrivo ? ', giro ' + x.arrivo.giro + '/' + x.arrivo.giri : '') : '';
-      return `<div class="storia"><b>${x.nome || x.s}<i>${g} ${data} · ${ora}${parz}</i></b><span>${x.min || 0} min</span></div>`;
-    }).join('');
-    if(LOG.length > 12) html += `<p class="vuoto">e altre ${LOG.length - 12} sessioni salvate.</p>`;
-  }
-  box.innerHTML = html;
-  el('storico-stato').textContent = DB.tipo === 'memoria'
-    ? 'Solo in memoria: si perde chiudendo'
-    : 'Salvato su questo telefono' + (DB.tipo === 'localStorage' ? ' (archivio semplice)' : '')
-      + (PERSISTENTE ? ', protetto dalla pulizia automatica' : '. Installa l\'app per proteggerlo');
-}
-
-async function datiEsportati(){
-  return {app:'allenamento', versione:2, esportato:new Date().toISOString(),
-          sessioni:await DB.tutte('sessioni'), fasi:await DB.tutte('fasi')};
-}
-el('esporta').onclick = async () => {
-  const testo = JSON.stringify(await datiEsportati(), null, 2);
-  try{
-    const b = new Blob([testo], {type:'application/json'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(b);
-    a.download = 'allenamenti-' + new Date().toISOString().slice(0, 10) + '.json';
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  }catch(e){
-    try{ navigator.clipboard.writeText(testo); alert('Storico copiato negli appunti.'); }
-    catch(e2){ alert(testo); }
-  }
-};
-el('svuota').onclick = async () => {
-  if(!confirm('Cancello tutto lo storico?')) return;
-  await DB.svuota('sessioni'); await DB.svuota('fasi');
-  LOG = []; disegnaStorico();
-};
-
 /* impostazioni */
 function bindSwitch(id, chiave){
   const b = el(id);
@@ -622,13 +564,13 @@ async function salvaFatto(parziale){
     }
   }
   try{ await DB.metti('sessioni', rec); }catch(e){}
-  LOG = await DB.tutte('sessioni');
-  disegnaStorico();
+  await ricaricaStorico();
 }
 
 // registra la fase della sbarra con la data del cambio
 async function segnaFase(fase){
   try{ await DB.metti('fasi', {d:new Date().toISOString(), fase}); }catch(e){}
+  await ricaricaStorico();
 }
 
 /* avvio */
@@ -648,10 +590,12 @@ async function segnaFase(fase){
   setTimeout(scegliVoce, 400);
   setTimeout(scegliVoce, 1500);
   LOG = await DB.tutte('sessioni').catch(() => []);
+  FASI = await DB.tutte('fasi').catch(() => []);
   // prima volta: segno la fase di partenza della sbarra
-  if(!(await DB.tutte('fasi').catch(() => [])).length) segnaFase(S.fase);
-  DB.persistente().then(p => { PERSISTENTE = p; disegnaStorico(); });
+  if(!FASI.length) segnaFase(S.fase);
+  DB.persistente().then(p => { PERSISTENTE = p; disegnaStatoDati(); });
   disegnaOggi(); disegnaSettimana(); disegnaLista(); disegnaStorico();
+  initStorico();
   window.addEventListener('resize', () => { if(runEl.classList.contains('on')) adattaNome(el('nome').textContent); });
 })();
 

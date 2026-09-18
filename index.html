@@ -46,13 +46,7 @@
 
   <h3 class="sez" style="margin-top:26px">Storico</h3>
   <div id="storico"></div>
-  <div class="imp" style="border:none">
-    <p>Salvataggio<i id="storico-stato">—</i></p>
-    <div class="segmento">
-      <button id="esporta">Esporta</button>
-      <button id="svuota">Svuota</button>
-    </div>
-  </div>
+  <a class="apri-storico" href="#storico">Apri lo storico completo ›</a>
 
   <h3 class="sez" style="margin-top:26px">Audio e timer</h3>
   <div class="imp">
@@ -108,6 +102,41 @@
   </p>
 </main>
 
+<main id="vista-storico" hidden>
+  <div class="top">
+    <a class="indietro" href="#">‹ Piano</a>
+    <span class="eyebrow">Storico</span>
+  </div>
+
+  <div id="st-conteggio"></div>
+
+  <h3 class="sez">Ultimi 3 mesi</h3>
+  <div id="st-calendario"></div>
+
+  <h3 class="sez" style="margin-top:26px">Minuti per mese</h3>
+  <div id="st-mesi"></div>
+
+  <h3 class="sez" style="margin-top:26px">Fase della sbarra</h3>
+  <div id="st-fasi"></div>
+
+  <h3 class="sez" style="margin-top:26px">Sessioni</h3>
+  <div id="st-elenco"></div>
+
+  <h3 class="sez" style="margin-top:26px">Dati</h3>
+  <div class="imp">
+    <p>Salvataggio<i id="storico-stato">—</i></p>
+  </div>
+  <div class="imp" style="border:none">
+    <p>Copia di sicurezza<i id="st-backup">File JSON da tenere su Drive</i></p>
+    <div class="segmento">
+      <button id="esporta">Esporta</button>
+      <button id="importa">Importa</button>
+    </div>
+  </div>
+  <input type="file" id="file-importa" accept=".json,application/json" hidden>
+  <button class="svuota" id="svuota">Svuota lo storico</button>
+</main>
+
 <section id="run" data-stato="work">
   <div class="barra" id="barra"></div>
   <div class="testata">
@@ -132,6 +161,7 @@
 
 <script src="data.js"></script>
 <script src="db.js"></script>
+<script src="storico.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
