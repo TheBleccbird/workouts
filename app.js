@@ -88,22 +88,128 @@ function popolaVoci(){
 }
 if('speechSynthesis' in window) speechSynthesis.addEventListener('voiceschanged', scegliVoce);
 
-function bip(f=880, d=.13, vol=.32, tipo='square'){
-  if(!S.bip || !ctx) return;
+// dopo = secondi di ritardo sull'orologio dell'AudioContext: il suono parte
+// all'ora giusta anche se il JavaScript rallenta a schermo spento
+function bip(f=880, d=.13, vol=.32, tipo='square', dopo=0){
+  if(!S.bip || !ctx) return null;
   try{
-    const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain();
+    const t = ctx.currentTime + Math.max(0, dopo), o = ctx.createOscillator(), g = ctx.createGain();
     o.type = tipo; o.frequency.value = f;
     g.gain.setValueAtTime(.0001, t);
     g.gain.exponentialRampToValueAtTime(vol, t + .012);
     g.gain.exponentialRampToValueAtTime(.0001, t + d);
     o.connect(g); g.connect(ctx.destination);
     o.start(t); o.stop(t + d + .03);
+    return o;
+  }catch(e){ return null; }
+}
+const bipVia   = (dopo=0) => [bip(660,.1,.3,'square',dopo), bip(990,.22,.34,'square',dopo+.13)];
+const bipStop  = (dopo=0) => [bip(420,.22,.3,'sawtooth',dopo)];
+const bipConto = (dopo=0) => [bip(1180,.07,.26,'square',dopo)];
+const bipFine  = (dopo=0) => [bip(523,.16,.3,'square',dopo), bip(659,.16,.3,'square',dopo+.17), bip(880,.4,.32,'square',dopo+.34)];
+
+/* bip programmati per lo step corrente: 3-2-1 e segnale del cambio */
+let programmati = [];
+function annullaBip(){
+  programmati.forEach(o => { try{ o.stop(); o.disconnect(); }catch(e){} });
+  programmati = [];
+}
+function programmaBip(){
+  annullaBip();
+  R.bipCambio = false;
+  if(!ctx || R.manuale || R.inPausa) return;
+  const s = R.q[R.i];
+  if(!s || s.type === 'done') return;
+  const resto = (R.fineA - Date.now()) / 1000;
+  for(const k of [3, 2, 1]) if(resto - k > .05) programmati.push(...bipConto(resto - k));
+  // suono dello step che segue, allo scadere
+  const dopo = R.q[R.i + 1];
+  if(dopo && resto > .05){
+    programmati.push(...(dopo.type === 'work' ? bipVia(resto) : dopo.type === 'rest' ? bipStop(resto) : bipFine(resto)));
+    R.bipCambio = true;
+  }
+  programmati = programmati.filter(Boolean);
+}
+
+/* ---- tenere viva l'app a schermo spento ----
+   Chrome non sospende né rallenta una pagina che riproduce audio udibile:
+   un <audio> in loop con un tono a 40 Hz a -60 dB (non si sente, ma per Chrome
+   è "audio in riproduzione") tiene vivi timer, voce e bip. Con MediaSession
+   compaiono anche i comandi nella schermata di blocco.                      */
+let vivo = null;
+function wavVivo(){
+  const hz = 8000, n = hz * 2, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+  const str = (o, t) => [...t].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  str(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); str(8, 'WAVE'); str(12, 'fmt ');
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, hz, true); v.setUint32(28, hz * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+  str(36, 'data'); v.setUint32(40, n * 2, true);
+  for(let i = 0; i < n; i++) v.setInt16(44 + i * 2, Math.round(Math.sin(2 * Math.PI * 40 * i / hz) * 33), true);
+  return URL.createObjectURL(new Blob([buf], {type:'audio/wav'}));
+}
+function avviaVivo(){
+  try{
+    if(!vivo){
+      vivo = new Audio(wavVivo());
+      vivo.loop = true;
+      vivo.setAttribute('playsinline', '');
+    }
+    const p = vivo.play();
+    if(p) p.catch(() => {});
+  }catch(e){}
+  impostaComandiMedia();
+}
+function fermaVivo(){
+  try{ vivo && vivo.pause(); }catch(e){}
+  if('mediaSession' in navigator){
+    try{ navigator.mediaSession.metadata = null; navigator.mediaSession.playbackState = 'none'; }catch(e){}
+  }
+}
+// se Android mette in pausa l'audio (ad es. mentre parla la sintesi vocale) lo riavvio
+function controllaVivo(){
+  if(vivo && vivo.paused && runEl.classList.contains('on')){
+    const p = vivo.play(); if(p) p.catch(() => {});
+  }
+  if(ctx && ctx.state !== 'running' && ctx.state !== 'closed' && runEl.classList.contains('on')){
+    try{ ctx.resume(); }catch(e){}
+  }
+}
+
+let comandiMedia = false;
+function impostaComandiMedia(){
+  if(comandiMedia || !('mediaSession' in navigator)) return;
+  comandiMedia = true;
+  const ms = navigator.mediaSession;
+  const azione = (a, f) => { try{ ms.setActionHandler(a, f); }catch(e){} };
+  azione('play', () => { if(R.inPausa) el('pausa').click(); });
+  azione('pause', () => { if(!R.inPausa) el('pausa').click(); });
+  azione('nexttrack', () => el('avanti').click());
+  azione('previoustrack', () => el('indietro').click());
+  azione('stop', () => {});
+}
+// titolo e avanzamento nella notifica / schermata di blocco
+function aggiornaMedia(){
+  if(!('mediaSession' in navigator) || !runEl.classList.contains('on')) return;
+  const ms = navigator.mediaSession, s = R.q[R.i];
+  try{
+    const titolo = s.type === 'work' ? s.e.n
+      : s.type === 'rest' ? 'Riposo' + (s.next ? ' · poi ' + s.next.e.n : '')
+      : s.type === 'prep' ? 'Si parte' : 'Sessione completata';
+    ms.metadata = new MediaMetadata({
+      title: titolo,
+      artist: R.sess.nome + (s.n ? ' · esercizio ' + s.n + '/' + s.tot : ''),
+      album: 'Allenamento',
+      artwork: [192, 512].map(n => ({src:'icons/icona-' + n + '.png', sizes:n + 'x' + n, type:'image/png'}))
+    });
+    ms.playbackState = R.inPausa ? 'paused' : 'playing';
+    if(ms.setPositionState){
+      if(s.dur && !R.manuale && s.type !== 'done'){
+        const tot = Math.max(s.dur, R.rimasti);
+        ms.setPositionState({duration:tot, playbackRate:1, position:Math.max(0, Math.min(tot, tot - R.rimasti))});
+      }else ms.setPositionState();
+    }
   }catch(e){}
 }
-const bipVia   = () => { bip(660,.1,.3); setTimeout(()=>bip(990,.22,.34), 130); };
-const bipStop  = () => { bip(420,.22,.3,'sawtooth'); };
-const bipConto = () => { bip(1180,.07,.26); };
-const bipFine  = () => { bip(523,.16,.3); setTimeout(()=>bip(659,.16,.3),170); setTimeout(()=>bip(880,.4,.32),340); };
 
 function parla(txt){
   if(!S.voce || !('speechSynthesis' in window)) return;
@@ -183,19 +289,25 @@ function apri(sess, opz = {}){
   el('pausa').textContent = 'Pausa';
   runEl.classList.add('on'); runEl.classList.remove('pausa');
   document.body.style.overflow = 'hidden';
-  initAudio(); wake();
+  initAudio(); wake(); avviaVivo();
   vaiA(0);
 }
 
 function chiudi(){
   clearInterval(R.tick); R.tick = null;
+  annullaBip(); fermaVivo();
   runEl.classList.remove('on'); document.body.style.overflow = '';
   try{ speechSynthesis.cancel(); }catch(e){}
   rilasciaWake();
 }
 
-function vaiA(i){
+// opz.daTimer: lo step precedente è scaduto da solo, il suo bip di cambio è già programmato
+function vaiA(i, opz = {}){
   clearInterval(R.tick); R.tick = null;
+  const giaSuonato = opz.daTimer && R.bipCambio;
+  if(giaSuonato) programmati = [];   // lascio finire i bip in corso
+  else annullaBip();
+  R.bipCambio = false;
   if(i < 0) i = 0;
   // un esercizio lasciato in avanti (timer scaduto, Avanti o Fatto) conta come fatto
   if(i > R.i && R.q[R.i] && R.q[R.i].type === 'work') R.fatti.add(R.i);
@@ -219,11 +331,14 @@ function vaiA(i){
       adattaNome('Riscaldamento fatto');
       el('nota').textContent = 'Pronto per ' + poi.nome.toLowerCase() + '.';
       el('avanti').textContent = 'Vai con ' + poi.nome;
-      bipFine(); parla('Riscaldamento finito. Quando sei pronto, si comincia.');
+      if(!giaSuonato) bipFine();
+      parla('Riscaldamento finito. Quando sei pronto, si comincia.');
     }else{
       el('avanti').textContent = 'Chiudi';
-      bipFine(); parla('Allenamento completato. Bravo.');
+      if(!giaSuonato) bipFine();
+      parla('Allenamento completato. Bravo.');
     }
+    aggiornaMedia();
     salvaFatto(false);
     return;
   }
@@ -254,7 +369,7 @@ function vaiA(i){
     el('nota').textContent = e.d || '';
     el('dopo').textContent = prossimoTesto(s);
     el('pos').textContent = 'Esercizio ' + s.n + ' / ' + s.tot;
-    bipVia();
+    if(!giaSuonato) bipVia();
     parla(e.n + (e.say ? ', ' + e.say : (e.tipo === 'rip' ? '' : ', ' + parlaTempo(e.t))) + '. Via.');
   }
   else if(s.type === 'rest'){
@@ -264,7 +379,7 @@ function vaiA(i){
     el('nota').textContent = s.next && s.next.e.d ? s.next.e.d : '';
     el('dopo').textContent = s.giroDopo ? 'Poi giro ' + s.giroDopo + ' di ' + s.giri : 'Prossimo esercizio';
     el('pos').textContent = 'Riposo ' + s.dur + '"';
-    bipStop();
+    if(!giaSuonato) bipStop();
     let t = 'Riposo ' + s.dur + ' secondi.';
     if(s.giroDopo) t += ' Poi giro ' + s.giroDopo + '.';
     if(s.next) t += ' Prossimo: ' + s.next.e.n + (s.next.e.say ? ', ' + s.next.e.say : '') + '.';
@@ -272,6 +387,8 @@ function vaiA(i){
   }
 
   disegna();
+  programmaBip();
+  aggiornaMedia();
   R.tick = setInterval(passo, 120);
 }
 
@@ -285,6 +402,7 @@ function prossimoTesto(s){
 }
 
 function passo(){
+  controllaVivo();
   if(R.inPausa) return;
   const s = R.q[R.i];
   if(R.manuale){
@@ -297,12 +415,12 @@ function passo(){
   const sec = R.rimasti;
   if(sec !== R.sec){
     R.sec = sec;
-    if(sec <= 3 && sec >= 1){ bipConto(); flash(); }
+    if(sec <= 3 && sec >= 1) flash();   // i bip 3-2-1 sono già programmati
     if(sec === 10 && s.dur >= 25 && s.type !== 'work') parla('Dieci secondi.');
     if(sec === 10 && s.type === 'work' && s.dur >= 40) parla('Dieci secondi.');
   }
   disegna();
-  if(ms <= 0) vaiA(R.i + 1);
+  if(ms <= 0) vaiA(R.i + 1, {daTimer:true});
 }
 
 function disegna(){
@@ -334,11 +452,24 @@ function flash(){
 }
 
 /* wake lock */
+// il sistema rilascia il lock quando l'app va in background: lo richiedo al ritorno
 let wl = null;
-async function wake(){ try{ wl = await navigator.wakeLock.request('screen'); }catch(e){} }
-function rilasciaWake(){ try{ wl && wl.release(); wl = null; }catch(e){} }
+async function wake(){
+  if(!('wakeLock' in navigator) || document.visibilityState !== 'visible') return;
+  if(wl && !wl.released) return;   // già attivo: niente doppioni (es. riscaldamento → sessione)
+  try{
+    wl = await navigator.wakeLock.request('screen');
+    wl.addEventListener('release', () => { wl = null; });
+  }catch(e){ wl = null; }
+}
+function rilasciaWake(){ try{ wl && wl.release(); }catch(e){} wl = null; }
 document.addEventListener('visibilitychange', () => {
-  if(document.visibilityState === 'visible' && runEl.classList.contains('on')) wake();
+  if(document.visibilityState !== 'visible' || !runEl.classList.contains('on')) return;
+  wake();
+  controllaVivo();
+  // al ritorno in primo piano rimetto in pari lo schermo e i bip
+  if(!R.inPausa && !R.manuale) programmaBip();
+  disegna(); aggiornaMedia();
 });
 
 /* comandi */
@@ -356,18 +487,23 @@ el('indietro').onclick = () => {
   while(j > 0 && R.q[j].type === 'rest') j--;
   vaiA(Math.max(0, j));
 };
-el('piu').onclick = () => { R.fineA += 15000; R.rimasti += 15; disegna(); bip(700,.08,.2); };
+el('piu').onclick = () => {
+  R.fineA += 15000; R.rimasti += 15; disegna(); bip(700,.08,.2);
+  programmaBip(); aggiornaMedia();
+};
 el('pausa').onclick = () => {
   R.inPausa = !R.inPausa;
   runEl.classList.toggle('pausa', R.inPausa);
   el('pausa').textContent = R.inPausa ? 'Riprendi' : 'Pausa';
-  if(R.inPausa){ R.pausaDa = Date.now(); try{ speechSynthesis.cancel(); }catch(e){} }
+  if(R.inPausa){ R.pausaDa = Date.now(); annullaBip(); try{ speechSynthesis.cancel(); }catch(e){} }
   else {
     const fermo = Date.now() - (R.pausaDa || Date.now());
     R.fineA = Date.now() + R.rimasti * 1000;
     R.inizioManuale += fermo;
     R.pausaTot += fermo;
+    programmaBip();
   }
+  aggiornaMedia();
 };
 // Esci: se c'è almeno un esercizio fatto la sessione finisce nello storico come parziale
 function esci(){
