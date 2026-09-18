@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#E6E4DC">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Allenamento · Luigi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Spline+Sans+Mono:wght@400..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<main id="home">
+  <div class="top">
+    <h1>Piano di allenamento</h1>
+    <span class="eyebrow">Casa + Parco</span>
+  </div>
+
+  <section class="oggi">
+    <div class="oggi-top">
+      <span class="eyebrow" id="oggi-giorno">Oggi</span>
+      <button class="mini" id="btn-settimana">Settimana 1</button>
+    </div>
+    <h2 id="oggi-titolo">—</h2>
+    <p id="oggi-durata">—</p>
+    <button class="vai" id="oggi-vai">Inizia</button>
+    <button class="vai ghost" id="oggi-secondo" hidden>Poi la sbarra</button>
+  </section>
+
+  <p class="nota-giorno" id="nota-giorno" hidden></p>
+  <div class="settimana" id="settimana"></div>
+
+  <h3 class="sez">Sessioni</h3>
+  <div id="lista"></div>
+
+  <h3 class="sez" style="margin-top:26px">Storico</h3>
+  <div id="storico"></div>
+  <div class="imp" style="border:none">
+    <p>Salvataggio<i id="storico-stato">—</i></p>
+    <div class="segmento">
+      <button id="esporta">Esporta</button>
+      <button id="svuota">Svuota</button>
+    </div>
+  </div>
+
+  <h3 class="sez" style="margin-top:26px">Audio e timer</h3>
+  <div class="imp">
+    <p>Voce guida<i>Annuncia esercizio, riposo e prossimo</i></p>
+    <button class="switch" id="sw-voce" aria-pressed="true" aria-label="Voce guida"></button>
+  </div>
+  <div class="imp">
+    <p>Quale voce<i id="voce-hint">Scegli quella che suona meglio</i></p>
+    <select id="sel-voce" class="sel" aria-label="Voce"></select>
+  </div>
+  <div class="imp">
+    <p>Velocità<i>Quanto veloce parla</i></p>
+    <div class="segmento" id="seg-vel">
+      <button data-v="0.9" aria-pressed="false">Calma</button>
+      <button data-v="1" aria-pressed="true">Normale</button>
+      <button data-v="1.15" aria-pressed="false">Svelta</button>
+    </div>
+  </div>
+  <details class="aiuto">
+    <summary>Suona ancora metallica?</summary>
+    <p><b>iPhone</b> — Impostazioni › Accessibilità › Contenuto pronunciato › Voci › Italiano: scarica <b>Alice (Migliorata)</b> o una voce <b>Premium</b>. Poi torna qui e riselezionala.</p>
+    <p><b>Android</b> — Impostazioni › Sistema › Lingue › Sintesi vocale › Google Text-to-speech › Installa dati vocali › Italiano. Nell'elenco qui sopra scegli una voce che finisce per <b>rete</b>: sono le più naturali, ma servono i dati.</p>
+    <p>L'elenco cambia dopo l'installazione: chiudi e riapri l'app per vedere le nuove voci.</p>
+  </details>
+  <div class="imp">
+    <p>Segnali acustici<i>Bip di partenza e conto alla rovescia</i></p>
+    <button class="switch" id="sw-bip" aria-pressed="true" aria-label="Segnali acustici"></button>
+  </div>
+  <div class="imp">
+    <p>Ripetizioni<i>Automatico avanza da solo. Manuale aspetta un tocco</i></p>
+    <div class="segmento" id="seg-modo">
+      <button data-v="auto" aria-pressed="true">Auto</button>
+      <button data-v="manuale" aria-pressed="false">Manuale</button>
+    </div>
+  </div>
+  <div class="imp">
+    <p>Ritmo<i>Quanto tempo do a ogni serie di ripetizioni</i></p>
+    <div class="segmento" id="seg-ritmo">
+      <button data-v="1.25" aria-pressed="false">Comodo</button>
+      <button data-v="1" aria-pressed="true">Normale</button>
+      <button data-v="0.85" aria-pressed="false">Rapido</button>
+    </div>
+  </div>
+  <div class="imp" style="border:none">
+    <p>Prova l'audio<i>Alza il volume e controlla che si senta</i></p>
+    <button class="segmento" id="prova" style="border:1px solid var(--linea); background:var(--carta); border-radius:7px; padding:8px 11px; font-family:var(--mono); font-size:.72rem">Prova</button>
+  </div>
+
+  <p class="pie">
+    Tieni il telefono in tasca: la voce ti dice cosa fare.<br>
+    Un tocco sul nome di un esercizio apre i video su YouTube.<br>
+    Non sostituisce il parere di un medico.
+  </p>
+</main>
+
+<section id="run" data-stato="work">
+  <div class="barra" id="barra"></div>
+  <div class="testata">
+    <button id="chiudi">Esci</button>
+    <span class="pos" id="pos"></span>
+    <button id="pausa">Pausa</button>
+  </div>
+  <div class="centro">
+    <span id="stato">Preparati</span>
+    <h2 id="nome">—</h2>
+    <span id="rip"></span>
+    <span id="nota"></span>
+    <div id="tempo">0:00</div>
+    <span id="dopo"></span>
+  </div>
+  <div class="comandi">
+    <button class="laterale" id="indietro" aria-label="Esercizio precedente">◀</button>
+    <button id="avanti">Avanti</button>
+    <button class="laterale" id="piu" aria-label="Aggiungi 15 secondi">+15</button>
+  </div>
+</section>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
