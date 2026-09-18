@@ -575,3 +575,30 @@ async function salvaFatto(){
   disegnaOggi(); disegnaSettimana(); disegnaLista(); disegnaStorico();
   window.addEventListener('resize', () => { if(runEl.classList.contains('on')) adattaNome(el('nome').textContent); });
 })();
+
+/* ============ SERVICE WORKER ============ */
+if('serviceWorker' in navigator){
+  let ricarica = false;
+  const mostraAggiornamento = reg => {
+    el('avviso-agg').hidden = false;
+    el('btn-agg').onclick = () => {
+      // mai a metà sessione: l'avviso è solo nella home, ma controllo comunque
+      if(runEl.classList.contains('on')) return;
+      ricarica = true;
+      reg.waiting && reg.waiting.postMessage('aggiorna');
+    };
+  };
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if(ricarica) location.reload(); });
+  window.addEventListener('load', async () => {
+    try{
+      const reg = await navigator.serviceWorker.register('sw.js');
+      if(reg.waiting && navigator.serviceWorker.controller) mostraAggiornamento(reg);
+      reg.addEventListener('updatefound', () => {
+        const nuovo = reg.installing;
+        nuovo && nuovo.addEventListener('statechange', () => {
+          if(nuovo.state === 'installed' && navigator.serviceWorker.controller) mostraAggiornamento(reg);
+        });
+      });
+    }catch(e){}
+  });
+}

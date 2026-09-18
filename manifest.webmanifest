@@ -1,0 +1,19 @@
+{
+  "name": "Allenamento",
+  "short_name": "Allenamento",
+  "description": "Allenamento guidato a voce: casa, parco e sbarra.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "lang": "it",
+  "theme_color": "#16181B",
+  "background_color": "#E6E4DC",
+  "icons": [
+    {"src": "icons/icona-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icons/icona-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icons/icona-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable"},
+    {"src": "icons/icona-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
