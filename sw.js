@@ -1,12 +1,13 @@
 /* Service worker: precache di tutti gli asset, poi cache-first.
    Per pubblicare una nuova versione cambia VERSIONE: la cache vecchia viene cancellata in activate. */
-const VERSIONE = 'v1';
+const VERSIONE = 'v2';
 const CACHE = 'allenamento-' + VERSIONE;
 const ASSET = [
   './',
   'index.html',
   'app.css',
   'data.js',
+  'db.js',
   'app.js',
   'manifest.webmanifest',
   'fonts/archivo-latin.woff2',

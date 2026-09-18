@@ -1,22 +1,35 @@
 /* ============ IMPOSTAZIONI ============ */
 const S = {voce:true, bip:true, modo:'auto', ritmo:1, fase:1, variante:1, voceNome:null, velocita:1};
-const mem = {};
-let dovesalvo = 'memoria';
-const store = {
-  async get(k){
-    try{ if(window.storage){ const r = await window.storage.get('lg_' + k); if(r) return JSON.parse(r.value); } }catch(e){}
-    try{ const v = localStorage.getItem('lg_' + k); if(v !== null) return JSON.parse(v); }catch(e){}
-    return k in mem ? mem[k] : null;
-  },
-  async set(k, v){
-    mem[k] = v;
-    try{ if(window.storage){ await window.storage.set('lg_' + k, JSON.stringify(v)); dovesalvo = 'Claude'; } }catch(e){}
-    try{ localStorage.setItem('lg_' + k, JSON.stringify(v)); if(dovesalvo === 'memoria') dovesalvo = 'telefono'; }catch(e){}
-  }
-};
-function provaSalvataggio(){
-  try{ localStorage.setItem('lg_test','1'); localStorage.removeItem('lg_test'); return 'telefono'; }catch(e){}
-  return window.storage ? 'Claude' : 'memoria';
+const store = {get: k => DB.get(k), set: (k, v) => DB.set(k, v).catch(() => {})};
+
+/* ---- migrazione dal vecchio localStorage (lg_*) ---- */
+// sessione del piano a partire dal nome salvato nel vecchio storico
+function sessDaNome(nome){
+  return [RISC, SESS_A, SESS_B, sbarraSess(1), sbarraSess(2), sbarraSess(3), STRETCH].find(x => x.nome === nome) || null;
+}
+const tipoSess = id => id.startsWith('sbarra') ? 'sbarra' : id;
+const faseSess = id => id.startsWith('sbarra') ? +id.slice(6) : null;
+
+// voce del vecchio formato {d, s, min} → nuovo record
+function daVecchioFormato(x){
+  const sess = sessDaNome(x.s);
+  const id = sess ? sess.id : 'altro';
+  return {d:x.d, inizio:null, sessId:id, nome:x.s, tipo:tipoSess(id), fase:faseSess(id),
+          min:x.min || 0, esercizi:null, eserciziTot:null, parziale:false, v:2};
+}
+
+async function migraVecchioStorage(){
+  if(await DB.get('migrato')) return;
+  try{
+    for(const k of ['voce','bip','modo','ritmo','fase','variante','voceNome','velocita']){
+      const v = localStorage.getItem('lg_' + k);
+      if(v !== null && (await DB.get(k)) === null) await DB.set(k, JSON.parse(v));
+    }
+    const log = JSON.parse(localStorage.getItem('lg_log') || '[]');
+    if(Array.isArray(log) && log.length) await DB.fondi('sessioni', log.filter(x => x && x.d).map(daVecchioFormato));
+  }catch(e){}
+  // le chiavi lg_* restano in localStorage come copia di sicurezza
+  await DB.set('migrato', new Date().toISOString());
 }
 
 /* ============ AUDIO ============ */
@@ -156,12 +169,18 @@ function adattaNome(t){
   n.style.fontSize = px.toFixed(1) + 'px';
 }
 
-const R = {q:[], i:0, fineA:0, rimasti:0, inPausa:false, tick:null, sec:null, sess:null, avvio:0, su:false};
+const R = {q:[], i:0, fineA:0, rimasti:0, inPausa:false, tick:null, sec:null, sess:null, avvio:0, su:false,
+           poi:null, pausaTot:0, fatti:new Set(), riscMs:0, riscAvvio:0, salvato:false};
 const el = id => document.getElementById(id);
 const runEl = el('run');
 
-function apri(sess){
+// opz.poi: sessione da fare dopo (riscaldamento concatenato)
+// opz.riscMs/riscAvvio: tempo del riscaldamento appena fatto, da sommare a questa sessione
+function apri(sess, opz = {}){
   R.sess = sess; R.q = costruisci(sess); R.i = 0; R.inPausa = false; R.avvio = Date.now();
+  R.poi = opz.poi || null; R.riscMs = opz.riscMs || 0; R.riscAvvio = opz.riscAvvio || 0;
+  R.pausaTot = 0; R.fatti = new Set(); R.salvato = false;
+  el('pausa').textContent = 'Pausa';
   runEl.classList.add('on'); runEl.classList.remove('pausa');
   document.body.style.overflow = 'hidden';
   initAudio(); wake();
@@ -178,6 +197,8 @@ function chiudi(){
 function vaiA(i){
   clearInterval(R.tick); R.tick = null;
   if(i < 0) i = 0;
+  // un esercizio lasciato in avanti (timer scaduto, Avanti o Fatto) conta come fatto
+  if(i > R.i && R.q[R.i] && R.q[R.i].type === 'work') R.fatti.add(R.i);
   R.i = i;
   const s = R.q[i];
   if(!s) return chiudi();
@@ -193,7 +214,7 @@ function vaiA(i){
     el('dopo').textContent = '';
     el('pos').textContent = R.sess.nome;
     el('barra').style.width = '100%';
-    const poi = R.sess._poi;
+    const poi = R.poi;
     if(poi){
       adattaNome('Riscaldamento fatto');
       el('nota').textContent = 'Pronto per ' + poi.nome.toLowerCase() + '.';
@@ -203,7 +224,7 @@ function vaiA(i){
       el('avanti').textContent = 'Chiudi';
       bipFine(); parla('Allenamento completato. Bravo.');
     }
-    salvaFatto();
+    salvaFatto(false);
     return;
   }
 
@@ -298,8 +319,13 @@ function formatta(sec){
   return m > 0 ? m + ':' + String(r).padStart(2, '0') : String(r);
 }
 function parlaTempo(t){ return t >= 60 ? Math.round(t/60) + ' minuti' : t + ' secondi'; }
+// tempo reale di allenamento in ms, pause escluse
+function tempoEffettivo(){
+  const ora = Date.now();
+  return ora - R.avvio - R.pausaTot - (R.inPausa ? ora - (R.pausaDa || ora) : 0);
+}
 function durataTot(){
-  const m = Math.round((Date.now() - R.avvio) / 60000);
+  const m = Math.round((tempoEffettivo() + R.riscMs) / 60000);
   return m + (m === 1 ? ' minuto' : ' minuti');
 }
 function flash(){
@@ -319,8 +345,8 @@ document.addEventListener('visibilitychange', () => {
 el('avanti').onclick = () => {
   const s = R.q[R.i];
   if(s.type === 'done'){
-    const poi = R.sess._poi;
-    if(poi){ R.sess._poi = null; return apri(poi); }
+    const poi = R.poi;
+    if(poi) return apri(poi, {riscMs:tempoEffettivo(), riscAvvio:R.avvio});
     return chiudi();
   }
   vaiA(R.i + 1);
@@ -340,15 +366,25 @@ el('pausa').onclick = () => {
     const fermo = Date.now() - (R.pausaDa || Date.now());
     R.fineA = Date.now() + R.rimasti * 1000;
     R.inizioManuale += fermo;
+    R.pausaTot += fermo;
   }
 };
-el('chiudi').onclick = chiudi;
+// Esci: se c'è almeno un esercizio fatto la sessione finisce nello storico come parziale
+function esci(){
+  const s = R.q[R.i];
+  if(s && s.type !== 'done' && R.fatti.size > 0){
+    if(!confirm('Esci dalla sessione?\nLa salvo nello storico come parziale.')) return;
+    salvaFatto(true);
+  }
+  chiudi();
+}
+el('chiudi').onclick = esci;
 document.addEventListener('keydown', e => {
   if(!runEl.classList.contains('on')) return;
   if(e.code === 'Space'){ e.preventDefault(); el('pausa').click(); }
   if(e.code === 'ArrowRight'){ e.preventDefault(); el('avanti').click(); }
   if(e.code === 'ArrowLeft'){ e.preventDefault(); el('indietro').click(); }
-  if(e.code === 'Escape') chiudi();
+  if(e.code === 'Escape') esci();
 });
 
 /* ============ HOME ============ */
@@ -384,7 +420,9 @@ function disegnaLista(){
     c.querySelector('.intestazione').onclick = () => c.classList.toggle('aperta');
     c.querySelector('.avvia').onclick = () => apri(sess);
     c.querySelectorAll('[data-fase]').forEach(b => b.onclick = () => {
-      S.fase = +b.dataset.fase; store.set('fase', S.fase); disegnaLista();
+      const f = +b.dataset.fase;
+      if(f !== S.fase) segnaFase(f);
+      S.fase = f; store.set('fase', S.fase); disegnaLista();
       const nuova = document.querySelectorAll('.card')[3]; if(nuova) nuova.classList.add('aperta');
     });
     box.appendChild(c);
@@ -452,7 +490,7 @@ function disegnaOggi(){
     el('oggi-titolo').textContent = sess.nome + (conSbarra ? ' + sbarra' : '');
     el('oggi-durata').textContent = conSbarra ? 'Riscaldamento, casa, parco · ~70 min' : sess.sottotitolo + ' · ' + sess.durata;
     btn.textContent = 'Inizia dal riscaldamento';
-    btn.onclick = () => { RISC._poi = sess; apri(RISC); };
+    btn.onclick = () => apri(RISC, {poi:sess});
     if(conSbarra){
       sec.hidden = false;
       sec.textContent = 'Vai diretto alla sbarra · fase ' + S.fase;
@@ -462,7 +500,8 @@ function disegnaOggi(){
 }
 
 /* ---- storico ---- */
-let LOG = [];
+let LOG = [];          // sessioni dalla più recente
+let PERSISTENTE = false;
 function disegnaStorico(){
   const box = el('storico');
   const ora = Date.now();
@@ -482,19 +521,24 @@ function disegnaStorico(){
       const g = NOMI_G[(d.getDay() + 6) % 7].slice(0, 3).toLowerCase();
       const data = d.getDate() + '/' + (d.getMonth() + 1);
       const ora = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
-      return `<div class="storia"><b>${x.s}<i>${g} ${data} · ${ora}</i></b><span>${x.min || 0} min</span></div>`;
+      const parz = x.parziale ? ' · parziale' + (x.arrivo ? ', giro ' + x.arrivo.giro + '/' + x.arrivo.giri : '') : '';
+      return `<div class="storia"><b>${x.nome || x.s}<i>${g} ${data} · ${ora}${parz}</i></b><span>${x.min || 0} min</span></div>`;
     }).join('');
     if(LOG.length > 12) html += `<p class="vuoto">e altre ${LOG.length - 12} sessioni salvate.</p>`;
   }
   box.innerHTML = html;
-  const dove = provaSalvataggio();
-  el('storico-stato').textContent = dove === 'telefono'
-    ? 'Salvato su questo telefono, resta anche chiudendo'
-    : dove === 'Claude' ? 'Salvato nell\'anteprima di Claude' : 'Solo in memoria: si perde chiudendo';
+  el('storico-stato').textContent = DB.tipo === 'memoria'
+    ? 'Solo in memoria: si perde chiudendo'
+    : 'Salvato su questo telefono' + (DB.tipo === 'localStorage' ? ' (archivio semplice)' : '')
+      + (PERSISTENTE ? ', protetto dalla pulizia automatica' : '. Installa l\'app per proteggerlo');
 }
 
-el('esporta').onclick = () => {
-  const testo = JSON.stringify(LOG, null, 2);
+async function datiEsportati(){
+  return {app:'allenamento', versione:2, esportato:new Date().toISOString(),
+          sessioni:await DB.tutte('sessioni'), fasi:await DB.tutte('fasi')};
+}
+el('esporta').onclick = async () => {
+  const testo = JSON.stringify(await datiEsportati(), null, 2);
   try{
     const b = new Blob([testo], {type:'application/json'});
     const a = document.createElement('a');
@@ -509,7 +553,8 @@ el('esporta').onclick = () => {
 };
 el('svuota').onclick = async () => {
   if(!confirm('Cancello tutto lo storico?')) return;
-  LOG = []; await store.set('log', LOG); disegnaStorico();
+  await DB.svuota('sessioni'); await DB.svuota('fasi');
+  LOG = []; disegnaStorico();
 };
 
 /* impostazioni */
@@ -548,17 +593,48 @@ el('prova').onclick = () => { initAudio(); scegliVoce(); bipVia(); parla('Goblet
 
 el('btn-settimana').onclick = () => { S.variante = S.variante === 1 ? 2 : 1; store.set('variante', S.variante); disegnaOggi(); disegnaSettimana(); };
 
-async function salvaFatto(){
-  if(R.sess.id === 'risc' && R.sess._poi) return;
-  const min = Math.max(1, Math.round((Date.now() - R.avvio) / 60000));
-  LOG.unshift({d:new Date().toISOString(), s:R.sess.nome, min});
-  LOG = LOG.slice(0, 200);
-  await store.set('log', LOG);
+// registra la sessione corrente; parziale = interrotta prima della fine
+async function salvaFatto(parziale){
+  if(R.salvato) return;
+  // riscaldamento concatenato finito: i suoi minuti passano alla sessione che segue
+  if(!parziale && R.sess.id === 'risc' && R.poi) return;
+  const esercizi = R.fatti.size;
+  if(parziale && esercizi === 0) return;
+  R.salvato = true;
+  const lavori = R.q.filter(x => x.type === 'work');
+  const rec = {
+    d: new Date().toISOString(),
+    inizio: new Date(R.riscAvvio || R.avvio).toISOString(),
+    sessId: R.sess.id, nome: R.sess.nome, tipo: tipoSess(R.sess.id), fase: faseSess(R.sess.id),
+    min: Math.max(1, Math.round((tempoEffettivo() + R.riscMs) / 60000)),
+    esercizi, eserciziTot: lavori.length, parziale, v:2
+  };
+  if(R.riscMs) rec.conRisc = true;
+  if(parziale){
+    // ultimo esercizio raggiunto: da lì ricavo blocco e giro
+    let j = R.i;
+    while(j > 0 && R.q[j].type !== 'work') j--;
+    const w = R.q[j];
+    if(w && w.type === 'work'){
+      const b = R.sess.blocchi[w.blocco];
+      rec.arrivo = {blocco:w.blocco + 1, blocchi:R.sess.blocchi.length, titolo:b.titolo || null,
+                    giro:w.giro, giri:w.giri, esercizio:w.n};
+    }
+  }
+  try{ await DB.metti('sessioni', rec); }catch(e){}
+  LOG = await DB.tutte('sessioni');
   disegnaStorico();
+}
+
+// registra la fase della sbarra con la data del cambio
+async function segnaFase(fase){
+  try{ await DB.metti('fasi', {d:new Date().toISOString(), fase}); }catch(e){}
 }
 
 /* avvio */
 (async () => {
+  await DB.apri();
+  await migraVecchioStorage();
   for(const k of ['voce','bip','modo','ritmo','fase','variante','voceNome','velocita']){
     const v = await store.get(k);
     if(v !== null && v !== undefined) S[k] = v;
@@ -571,7 +647,10 @@ async function salvaFatto(){
   scegliVoce();
   setTimeout(scegliVoce, 400);
   setTimeout(scegliVoce, 1500);
-  LOG = (await store.get('log')) || [];
+  LOG = await DB.tutte('sessioni').catch(() => []);
+  // prima volta: segno la fase di partenza della sbarra
+  if(!(await DB.tutte('fasi').catch(() => [])).length) segnaFase(S.fase);
+  DB.persistente().then(p => { PERSISTENTE = p; disegnaStorico(); });
   disegnaOggi(); disegnaSettimana(); disegnaLista(); disegnaStorico();
   window.addEventListener('resize', () => { if(runEl.classList.contains('on')) adattaNome(el('nome').textContent); });
 })();
