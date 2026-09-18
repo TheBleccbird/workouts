@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#E6E4DC">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Allenamento · Luigi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Spline+Sans+Mono:wght@400..700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cemento:#E6E4DC; --carta:#F4F2EA; --inchiostro:#16181B; --grafite:#585D62;
+  --lavoro:#D93F1D; --riposo:#1E5C56; --crema:#F7F3E9; --segno:#B5891A;
+  --linea:rgba(22,24,27,.16);
+  --disp:'Archivo', system-ui, sans-serif;
+  --mono:'Spline Sans Mono', ui-monospace, monospace;
+}
+*{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  background:var(--cemento); color:var(--inchiostro);
+  font-family:var(--disp); font-variation-settings:'wdth' 100;
+  overscroll-behavior:none; -webkit-font-smoothing:antialiased;
+}
+button{font:inherit; color:inherit; background:none; border:none; cursor:pointer}
+.mono{font-family:var(--mono); font-variant-numeric:tabular-nums}
+.eyebrow{font-family:var(--mono); font-size:.7rem; letter-spacing:.14em; text-transform:uppercase; color:var(--grafite)}
+
+/* ---------- HOME ---------- */
+#home{max-width:560px; margin:0 auto; padding:22px 16px 60px; overflow-x:hidden}
+.top{display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-bottom:26px}
+.top h1{font-size:1.05rem; font-weight:900; font-variation-settings:'wdth' 112,'wght' 900; text-transform:uppercase; letter-spacing:.02em}
+
+.oggi{
+  background:var(--inchiostro); color:var(--crema); border-radius:14px;
+  padding:18px 18px 16px; margin-bottom:14px;
+}
+.oggi .eyebrow{color:rgba(247,243,233,.6)}
+.oggi-top{display:flex; justify-content:space-between; align-items:center; gap:8px}
+.mini{
+  font-family:var(--mono); font-size:.64rem; letter-spacing:.06em; text-transform:uppercase;
+  border:1px solid rgba(247,243,233,.35); border-radius:99px; padding:6px 10px;
+  color:var(--crema); white-space:nowrap; flex:none;
+}
+.oggi h2{
+  font-size:clamp(1.7rem,8.4vw,2.7rem); line-height:.94; font-weight:900;
+  font-variation-settings:'wdth' 108,'wght' 900; text-transform:uppercase;
+  margin:12px 0 4px; overflow-wrap:anywhere;
+}
+.oggi p{font-family:var(--mono); font-size:.78rem; color:rgba(247,243,233,.66); margin-bottom:16px; overflow-wrap:anywhere}
+.vai{
+  display:block; width:100%; background:var(--lavoro); color:var(--crema);
+  border-radius:10px; padding:16px 10px; font-weight:900; font-size:clamp(.9rem,4vw,1.05rem);
+  text-transform:uppercase; letter-spacing:.05em; font-variation-settings:'wdth' 106,'wght' 900;
+}
+.vai:active{transform:translateY(1px)}
+.vai.ghost{background:transparent; color:var(--crema); border:1.5px solid rgba(247,243,233,.35); margin-top:8px; font-size:.85rem}
+
+.settimana{display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:3px; margin:18px 0 26px}
+.giorno{
+  background:var(--carta); border:1px solid var(--linea); border-radius:8px;
+  padding:7px 1px 6px; text-align:center; min-height:68px; width:100%; overflow:hidden;
+  display:flex; flex-direction:column; align-items:center; gap:3px;
+}
+.giorno b{font-family:var(--mono); font-size:.58rem; letter-spacing:.02em; color:var(--grafite); font-weight:400}
+.giorno span{font-size:clamp(.8rem,4.2vw,1.05rem); font-weight:900; line-height:1; font-variation-settings:'wdth' 90,'wght' 900}
+.giorno i{font-style:normal; font-family:var(--mono); font-size:.52rem; line-height:1.2; color:var(--grafite); overflow-wrap:anywhere}
+.giorno.oggi-g{background:var(--inchiostro); border-color:var(--inchiostro); color:var(--crema)}
+.giorno.oggi-g b, .giorno.oggi-g i{color:rgba(247,243,233,.7)}
+.giorno.scelto-g{border:2px solid var(--lavoro); padding:6px 0 5px}
+.giorno.scelto-g b, .giorno.scelto-g i{color:var(--lavoro)}
+.giorno.scelto-g span{color:var(--lavoro)}
+.giorno.riposo-g span{color:var(--grafite); font-weight:600}
+
+h3.sez{
+  font-family:var(--mono); font-size:.7rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--grafite); margin:0 0 10px; padding-bottom:8px; border-bottom:1px solid var(--linea);
+}
+.card{background:var(--carta); border:1px solid var(--linea); border-radius:12px; margin-bottom:8px; overflow:hidden}
+.card>.intestazione{display:flex; align-items:center; gap:12px; width:100%; padding:15px 16px; text-align:left}
+.card .nome{flex:1}
+.card .nome strong{display:block; font-size:1.02rem; font-weight:800; font-variation-settings:'wdth' 108,'wght' 800}
+.card .nome em{font-style:normal; font-family:var(--mono); font-size:.72rem; color:var(--grafite)}
+.chev{font-family:var(--mono); color:var(--grafite); font-size:.9rem; transition:transform .18s}
+.card.aperta .chev{transform:rotate(90deg)}
+.dettaglio{display:none; padding:0 16px 16px; border-top:1px dashed var(--linea)}
+.card.aperta .dettaglio{display:block}
+.dettaglio .nota{font-family:var(--mono); font-size:.74rem; color:var(--grafite); margin:12px 0}
+.riga{display:flex; justify-content:space-between; gap:14px; padding:7px 0; border-bottom:1px solid rgba(22,24,27,.07); align-items:baseline}
+.riga a{color:var(--inchiostro); text-decoration:none; border-bottom:1px solid var(--linea); font-size:.9rem; font-weight:600}
+.riga a:hover{border-color:var(--lavoro); color:var(--lavoro)}
+.riga i{display:block; font-style:normal; font-family:var(--mono); font-size:.68rem; color:var(--grafite); margin-top:2px}
+.riga .val{font-family:var(--mono); font-size:.82rem; white-space:nowrap; color:var(--grafite)}
+.avvia{
+  width:100%; margin-top:14px; background:var(--inchiostro); color:var(--crema);
+  border-radius:9px; padding:13px; font-weight:800; text-transform:uppercase;
+  letter-spacing:.05em; font-size:.85rem;
+}
+.fasi{display:flex; gap:6px; margin:12px 0 0}
+.fasi button{
+  flex:1; border:1px solid var(--linea); background:var(--cemento); border-radius:8px; padding:9px 4px;
+  font-family:var(--mono); font-size:.72rem; color:var(--grafite);
+}
+.fasi button[aria-pressed="true"]{background:var(--riposo); border-color:var(--riposo); color:var(--crema)}
+
+.imp{display:flex; justify-content:space-between; align-items:center; padding:13px 0; border-bottom:1px solid var(--linea)}
+.imp p{font-size:.92rem; font-weight:700}
+.imp p i{display:block; font-style:normal; font-family:var(--mono); font-size:.68rem; color:var(--grafite); font-weight:400; margin-top:2px}
+.switch{width:52px; height:30px; border-radius:99px; background:rgba(22,24,27,.18); position:relative; flex:none; transition:background .18s}
+.switch::after{content:''; position:absolute; top:3px; left:3px; width:24px; height:24px; border-radius:99px; background:var(--carta); transition:transform .18s}
+.switch[aria-pressed="true"]{background:var(--riposo)}
+.switch[aria-pressed="true"]::after{transform:translateX(22px)}
+.segmento{display:flex; gap:4px; flex:none}
+.segmento button{border:1px solid var(--linea); background:var(--carta); border-radius:7px; padding:8px 11px; font-family:var(--mono); font-size:.72rem; color:var(--grafite)}
+.segmento button[aria-pressed="true"]{background:var(--inchiostro); border-color:var(--inchiostro); color:var(--crema)}
+.sel{
+  flex:none; max-width:58%; border:1px solid var(--linea); background:var(--carta);
+  border-radius:7px; padding:9px 10px; font-family:var(--mono); font-size:.74rem;
+  color:var(--inchiostro); appearance:none;
+}
+.aiuto{border-bottom:1px solid var(--linea); padding:12px 0}
+.aiuto summary{font-family:var(--mono); font-size:.74rem; color:var(--riposo); cursor:pointer; list-style:none}
+.aiuto summary::-webkit-details-marker{display:none}
+.aiuto summary::before{content:'+ '; }
+.aiuto[open] summary::before{content:'– '}
+.aiuto p{font-family:var(--mono); font-size:.72rem; line-height:1.6; color:var(--grafite); margin-top:10px}
+.aiuto b{color:var(--inchiostro)}
+.nota-giorno{
+  display:flex; justify-content:space-between; align-items:center; gap:10px;
+  font-family:var(--mono); font-size:.7rem; color:var(--lavoro); margin:14px 0 -6px;
+}
+.nota-giorno button{font-family:var(--mono); font-size:.7rem; color:var(--inchiostro); border-bottom:1px solid var(--linea)}
+.storia{display:flex; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid rgba(22,24,27,.07); align-items:baseline}
+.storia b{font-size:.92rem; font-weight:700}
+.storia b i{display:block; font-style:normal; font-family:var(--mono); font-size:.66rem; color:var(--grafite); font-weight:400; margin-top:2px}
+.storia span{font-family:var(--mono); font-size:.74rem; color:var(--grafite); white-space:nowrap}
+.vuoto{font-family:var(--mono); font-size:.74rem; color:var(--grafite); padding:14px 0; line-height:1.6}
+.conteggio{
+  display:flex; gap:10px; margin-bottom:12px;
+}
+.conteggio div{
+  flex:1; background:var(--carta); border:1px solid var(--linea); border-radius:10px; padding:12px 10px;
+}
+.conteggio strong{display:block; font-size:1.6rem; font-weight:900; font-variation-settings:'wdth' 108,'wght' 900; line-height:1}
+.conteggio em{font-style:normal; font-family:var(--mono); font-size:.62rem; color:var(--grafite); text-transform:uppercase; letter-spacing:.06em}
+.pie{margin-top:26px; font-family:var(--mono); font-size:.68rem; line-height:1.6; color:var(--grafite)}
+
+/* ---------- SCHERMO ALLENAMENTO ---------- */
+#run{
+  position:fixed; inset:0; height:100dvh; display:none; flex-direction:column; overflow:hidden;
+  background:var(--inchiostro); color:var(--crema);
+  padding:max(12px,env(safe-area-inset-top)) 14px max(14px,env(safe-area-inset-bottom));
+  transition:background .25s ease;
+}
+#run.on{display:flex}
+#run[data-stato="work"]{background:var(--lavoro)}
+#run[data-stato="rest"]{background:var(--riposo)}
+#run[data-stato="done"]{background:var(--inchiostro)}
+#run.pausa{background:#2C2F33}
+
+.barra{position:absolute; top:0; left:0; height:5px; background:rgba(247,243,233,.85); width:0%; transition:width .2s linear}
+.testata{display:flex; justify-content:space-between; align-items:center; gap:10px; padding-top:8px}
+.testata button{
+  flex:none; font-family:var(--mono); font-size:.7rem; letter-spacing:.08em; text-transform:uppercase;
+  border:1.5px solid rgba(247,243,233,.4); border-radius:8px; padding:8px 12px; color:var(--crema);
+}
+.pos{font-family:var(--mono); font-size:.66rem; letter-spacing:.08em; text-transform:uppercase; opacity:.75; text-align:center; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+
+.centro{
+  flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center;
+  text-align:center; gap:3px; min-height:0; width:100%; overflow:hidden;
+}
+#stato{font-family:var(--mono); font-size:.74rem; letter-spacing:.2em; text-transform:uppercase; opacity:.75}
+#nome{
+  line-height:.92; font-weight:900; text-transform:uppercase; margin:6px 0 2px;
+  width:100%; max-width:100%; overflow-wrap:anywhere; hyphens:auto; text-wrap:balance;
+  font-size:2.2rem; font-variation-settings:'wdth' 112,'wght' 900;
+}
+#rip{font-family:var(--mono); font-size:clamp(.95rem,4.4vw,1.15rem); font-weight:700}
+#nota{font-family:var(--mono); font-size:clamp(.7rem,3.2vw,.8rem); opacity:.72; max-width:24ch; margin-top:2px}
+#tempo{
+  font-family:var(--mono); font-variant-numeric:tabular-nums; font-weight:700;
+  font-size:clamp(3.8rem,23vw,7.5rem); line-height:1; letter-spacing:-.04em; margin:8px 0 2px;
+}
+#dopo{font-family:var(--mono); font-size:clamp(.72rem,3.4vw,.82rem); opacity:.8; max-width:28ch; overflow-wrap:anywhere}
+.pulse{animation:pulse .3s ease}
+@keyframes pulse{0%{transform:scale(1)}45%{transform:scale(1.045)}100%{transform:scale(1)}}
+
+.comandi{display:flex; gap:8px; align-items:stretch}
+.comandi .laterale{
+  flex:none; width:64px; border:1.5px solid rgba(247,243,233,.4); border-radius:12px;
+  font-family:var(--mono); font-size:.8rem; color:var(--crema);
+}
+#avanti{
+  flex:1; min-width:0; background:var(--crema); color:var(--inchiostro); border-radius:12px;
+  padding:22px 8px; font-weight:900; font-size:clamp(.95rem,4.4vw,1.15rem); text-transform:uppercase;
+  letter-spacing:.05em; font-variation-settings:'wdth' 106,'wght' 900;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+#avanti:active{transform:translateY(1px)}
+#run[data-stato="done"] .comandi .laterale{display:none}
+
+@media (prefers-reduced-motion: reduce){
+  *{transition:none !important; animation:none !important}
+}
+</style>
+</head>
+<body>
+
+<main id="home">
+  <div class="top">
+    <h1>Piano di allenamento</h1>
+    <span class="eyebrow">Casa + Parco</span>
+  </div>
+
+  <section class="oggi">
+    <div class="oggi-top">
+      <span class="eyebrow" id="oggi-giorno">Oggi</span>
+      <button class="mini" id="btn-settimana">Settimana 1</button>
+    </div>
+    <h2 id="oggi-titolo">—</h2>
+    <p id="oggi-durata">—</p>
+    <button class="vai" id="oggi-vai">Inizia</button>
+    <button class="vai ghost" id="oggi-secondo" hidden>Poi la sbarra</button>
+  </section>
+
+  <p class="nota-giorno" id="nota-giorno" hidden></p>
+  <div class="settimana" id="settimana"></div>
+
+  <h3 class="sez">Sessioni</h3>
+  <div id="lista"></div>
+
+  <h3 class="sez" style="margin-top:26px">Storico</h3>
+  <div id="storico"></div>
+  <div class="imp" style="border:none">
+    <p>Salvataggio<i id="storico-stato">—</i></p>
+    <div class="segmento">
+      <button id="esporta">Esporta</button>
+      <button id="svuota">Svuota</button>
+    </div>
+  </div>
+
+  <h3 class="sez" style="margin-top:26px">Audio e timer</h3>
+  <div class="imp">
+    <p>Voce guida<i>Annuncia esercizio, riposo e prossimo</i></p>
+    <button class="switch" id="sw-voce" aria-pressed="true" aria-label="Voce guida"></button>
+  </div>
+  <div class="imp">
+    <p>Quale voce<i id="voce-hint">Scegli quella che suona meglio</i></p>
+    <select id="sel-voce" class="sel" aria-label="Voce"></select>
+  </div>
+  <div class="imp">
+    <p>Velocità<i>Quanto veloce parla</i></p>
+    <div class="segmento" id="seg-vel">
+      <button data-v="0.9" aria-pressed="false">Calma</button>
+      <button data-v="1" aria-pressed="true">Normale</button>
+      <button data-v="1.15" aria-pressed="false">Svelta</button>
+    </div>
+  </div>
+  <details class="aiuto">
+    <summary>Suona ancora metallica?</summary>
+    <p><b>iPhone</b> — Impostazioni › Accessibilità › Contenuto pronunciato › Voci › Italiano: scarica <b>Alice (Migliorata)</b> o una voce <b>Premium</b>. Poi torna qui e riselezionala.</p>
+    <p><b>Android</b> — Impostazioni › Sistema › Lingue › Sintesi vocale › Google Text-to-speech › Installa dati vocali › Italiano. Nell'elenco qui sopra scegli una voce che finisce per <b>rete</b>: sono le più naturali, ma servono i dati.</p>
+    <p>L'elenco cambia dopo l'installazione: chiudi e riapri l'app per vedere le nuove voci.</p>
+  </details>
+  <div class="imp">
+    <p>Segnali acustici<i>Bip di partenza e conto alla rovescia</i></p>
+    <button class="switch" id="sw-bip" aria-pressed="true" aria-label="Segnali acustici"></button>
+  </div>
+  <div class="imp">
+    <p>Ripetizioni<i>Automatico avanza da solo. Manuale aspetta un tocco</i></p>
+    <div class="segmento" id="seg-modo">
+      <button data-v="auto" aria-pressed="true">Auto</button>
+      <button data-v="manuale" aria-pressed="false">Manuale</button>
+    </div>
+  </div>
+  <div class="imp">
+    <p>Ritmo<i>Quanto tempo do a ogni serie di ripetizioni</i></p>
+    <div class="segmento" id="seg-ritmo">
+      <button data-v="1.25" aria-pressed="false">Comodo</button>
+      <button data-v="1" aria-pressed="true">Normale</button>
+      <button data-v="0.85" aria-pressed="false">Rapido</button>
+    </div>
+  </div>
+  <div class="imp" style="border:none">
+    <p>Prova l'audio<i>Alza il volume e controlla che si senta</i></p>
+    <button class="segmento" id="prova" style="border:1px solid var(--linea); background:var(--carta); border-radius:7px; padding:8px 11px; font-family:var(--mono); font-size:.72rem">Prova</button>
+  </div>
+
+  <p class="pie">
+    Tieni il telefono in tasca: la voce ti dice cosa fare.<br>
+    Un tocco sul nome di un esercizio apre i video su YouTube.<br>
+    Non sostituisce il parere di un medico.
+  </p>
+</main>
+
+<section id="run" data-stato="work">
+  <div class="barra" id="barra"></div>
+  <div class="testata">
+    <button id="chiudi">Esci</button>
+    <span class="pos" id="pos"></span>
+    <button id="pausa">Pausa</button>
+  </div>
+  <div class="centro">
+    <span id="stato">Preparati</span>
+    <h2 id="nome">—</h2>
+    <span id="rip"></span>
+    <span id="nota"></span>
+    <div id="tempo">0:00</div>
+    <span id="dopo"></span>
+  </div>
+  <div class="comandi">
+    <button class="laterale" id="indietro" aria-label="Esercizio precedente">◀</button>
+    <button id="avanti">Avanti</button>
+    <button class="laterale" id="piu" aria-label="Aggiungi 15 secondi">+15</button>
+  </div>
+</section>
+
+<script>
+/* ============ DATI ============ */
+const yt = q => 'https://www.youtube.com/results?search_query=' + encodeURIComponent(q);
+
+const RISC = {
+  id:'risc', nome:'Riscaldamento', durata:'5 min', sottotitolo:'Prima di ogni sessione',
+  nota:'Corsetta blanda sul posto, mantenuta per tutta la sequenza.',
+  blocchi:[{giri:1, riposoEs:0, riposoGiro:0, esercizi:[
+    {n:'Circonduzione dei polsi', d:'Braccia avanti, giri ampi', t:25, video:'circonduzione polsi riscaldamento'},
+    {n:'Polsi con mani unite', d:'Dita intrecciate', t:25, video:'mobilità polsi mani intrecciate'},
+    {n:'Spalle avanti, braccia larghe', d:'Cerchi grandi', t:25, video:'circonduzioni spalle avanti'},
+    {n:'Spalle avanti, braccia strette', d:'Cerchi piccoli e veloci', t:25, video:'circonduzioni spalle avanti'},
+    {n:'Spalle indietro, braccia larghe', d:'Apri il petto', t:25, video:'circonduzioni spalle indietro'},
+    {n:'Spalle indietro, braccia strette', d:'Cerchi piccoli', t:25, video:'circonduzioni spalle indietro'},
+    {n:'Apertura e chiusura braccia', d:'Abbraccio ampio', t:25, video:'apertura chiusura braccia riscaldamento'},
+    {n:'Tocco piede controlaterale', d:'Busto flesso, gambe tese', t:25, video:'tocco piede controlaterale esercizio'},
+    {n:'Mezzo affondo indietro', d:'Alterna le gambe', r:'20 rip', say:'20 ripetizioni', t:45, tipo:'rip', video:'mezzo affondo indietro tecnica'}
+  ]}]
+};
+
+const SESS_A = {
+  id:'A', nome:'Sessione A', durata:'~30 min', sottotitolo:'Gambe + spinta · 3 giri',
+  nota:'Riposo 40" tra gli esercizi, 90" tra i giri. Nessuna tirata: la schiena arriva fresca alla sbarra.',
+  blocchi:[
+    {giri:3, riposoEs:40, riposoGiro:90, esercizi:[
+      {n:'Goblet squat', d:'Manubrio al petto, discesa in 2"', r:'15', say:'15 ripetizioni', t:55, tipo:'rip', video:'goblet squat tecnica corretta'},
+      {n:'Piegamenti sulle braccia', d:'Se duri: su rialzo o ginocchia', r:'max −2', say:'massimo meno due', t:45, tipo:'rip', video:'piegamenti sulle braccia tecnica'},
+      {n:'Affondo indietro alternato', d:'Un manubrio per mano', r:'10 + 10', say:'10 per gamba', t:65, tipo:'rip', video:'affondo indietro alternato manubri'},
+      {n:'Military press', d:'In piedi, core contratto', r:'10', say:'10 ripetizioni', t:40, tipo:'rip', video:'military press manubri in piedi'},
+      {n:'Ponte glutei monopodalico', d:'Pausa 1" in alto', r:'12 + 12', say:'12 per gamba', t:65, tipo:'rip', video:'ponte glutei monopodalico'},
+      {n:'Alzate laterali', d:'Peso leggero, movimento pulito', r:'15', say:'15 ripetizioni', t:45, tipo:'rip', video:'alzate laterali manubri tecnica'},
+      {n:'Plank', d:'Bacino in linea, non alzarlo', t:40, video:'plank tecnica corretta'}
+    ]},
+    {giri:3, riposoEs:0, riposoGiro:60, titolo:'Finale', esercizi:[
+      {n:'Farmer walk', d:'Tutto il peso, spalle basse', r:'30-40 m', say:'30, 40 metri', t:45, tipo:'rip', video:'farmer walk tecnica'}
+    ]}
+  ]
+};
+
+const SESS_B = {
+  id:'B', nome:'Sessione B', durata:'~35 min', sottotitolo:'Full body + core · 3 giri',
+  nota:'Riposo 40" tra gli esercizi, 90" tra i giri.',
+  blocchi:[{giri:3, riposoEs:40, riposoGiro:90, esercizi:[
+    {n:'Skip con battito sotto il ginocchio', d:'Ginocchia alte', t:40, video:'skip battito sotto ginocchio'},
+    {n:'Piegamenti + negativi', d:'Negativi in 4" di discesa', r:'6 + 2', say:'6 completi più 2 negativi', t:50, tipo:'rip', video:'piegamenti negativi tecnica'},
+    {n:'Rematore con manubrio', d:'Schiena piatta, gomito lungo il fianco', r:'12 + 12', say:'12 per braccio', t:70, tipo:'rip', video:'rematore con manubrio un braccio'},
+    {n:'Stacco rumeno', d:'Ginocchia morbide, schiena neutra', r:'12', say:'12 ripetizioni', t:50, tipo:'rip', video:'stacco rumeno manubri tecnica'},
+    {n:'Squat bulgaro', d:'Piede dietro su una sedia', r:'10 + 10', say:'10 per gamba', t:70, tipo:'rip', video:'squat bulgaro tecnica'},
+    {n:'Barchetta facilitata', d:'Gambe alternate, braccia avanti', r:'12', say:'12 ripetizioni', t:45, tipo:'rip', video:'hollow body rocks facilitato'},
+    {n:'Mountain climber', d:'Massima velocità', t:25, video:'mountain climber tecnica'}
+  ]}]
+};
+
+const SBARRA = {
+  1:{nome:'Fase 1 · Presa e spalle', settimane:'settimane 1-3',
+     nota:'Passi alla fase 2 quando tieni 45-60" per serie di dead hang.',
+     blocchi:[
+       {giri:4, riposoEs:0, riposoGiro:60, esercizi:[{n:'Dead hang', d:'Appeso, spalle attive', r:'20-40"', t:35, video:'dead hang tecnica'}]},
+       {giri:3, riposoEs:0, riposoGiro:60, esercizi:[{n:'Scapular pull-up', d:'Braccia tese, abbassi le spalle', r:'6-8', say:'6, 8 ripetizioni', t:30, tipo:'rip', video:'scapular pull up tecnica'}]}
+     ]},
+  2:{nome:'Fase 2 · Attivare la schiena', settimane:'settimane 4-6',
+     nota:'Passi alla fase 3 quando fai 3 × 5 negative pulite da 5".',
+     blocchi:[
+       {giri:2, riposoEs:0, riposoGiro:60, esercizi:[{n:'Dead hang', d:'Solo come riscaldamento', r:'45"', t:45, video:'dead hang tecnica'}]},
+       {giri:3, riposoEs:0, riposoGiro:60, esercizi:[{n:'Scapular pull-up', d:'Braccia tese', r:'10', say:'10 ripetizioni', t:35, tipo:'rip', video:'scapular pull up tecnica'}]},
+       {giri:3, riposoEs:0, riposoGiro:120, esercizi:[{n:'Negative', d:'Salti su, scendi in 5"', r:'3', say:'3 discese da 5 secondi', t:35, tipo:'rip', video:'negative pull up 5 secondi'}]}
+     ]},
+  3:{nome:'Fase 3 · La prima trazione', settimane:'settimane 7+',
+     nota:'Riposo pieno tra i tentativi di trazione: 2-3 minuti.',
+     blocchi:[
+       {giri:2, riposoEs:0, riposoGiro:60, esercizi:[{n:'Dead hang', d:'Riscaldamento', r:'45"', t:45, video:'dead hang tecnica'}]},
+       {giri:5, riposoEs:0, riposoGiro:150, esercizi:[{n:'Trazione completa', d:'Riposo pieno tra i tentativi', r:'1', say:'una trazione', t:20, tipo:'rip', video:'prima trazione pull up tecnica'}]},
+       {giri:3, riposoEs:0, riposoGiro:120, esercizi:[{n:'Negative', d:'A completamento, 5" di discesa', r:'5', say:'5 discese', t:50, tipo:'rip', video:'negative pull up 5 secondi'}]},
+       {giri:3, riposoEs:0, riposoGiro:90, esercizi:[{n:'Rematore australiano', d:'Se trovi una sbarra bassa', r:'10', say:'10 ripetizioni', t:45, tipo:'rip', video:'rematore australiano tecnica'}]}
+     ]}
+};
+function sbarraSess(f){
+  const s = SBARRA[f];
+  return {id:'sbarra'+f, nome:'Sbarra · '+s.nome.split('·')[1].trim(), durata:'10-15 min',
+          sottotitolo:s.settimane, nota:s.nota, blocchi:s.blocchi};
+}
+
+const STRETCH = {
+  id:'stretch', nome:'Defaticamento', durata:'5 min', sottotitolo:'Fine allenamento',
+  nota:'Oppure in seduta a parte, facendo prima il riscaldamento.',
+  blocchi:[{giri:1, riposoEs:10, riposoGiro:0, esercizi:[
+    {n:'Ischiocrurali da seduto', d:'10 respiri lenti', t:45, video:'stretching ischiocrurali da seduto'},
+    {n:'Adduttori farfalla', d:'10 respiri lenti', t:45, video:'stretching farfalla adduttori'},
+    {n:'Cat / Cow', d:'In quadrupedia, 4 giri da 3"', t:40, video:'cat cow esercizio'}
+  ]}]
+};
+
+const SETTIMANA = [
+  {g:'LUN', v1:'A + Sbarra', v2:'B + Sbarra'},
+  {g:'MAR', v1:'Camminata', v2:'Camminata'},
+  {g:'MER', v1:'B', v2:'A'},
+  {g:'GIO', v1:'Camminata', v2:'Camminata'},
+  {g:'VEN', v1:'A + Sbarra', v2:'B + Sbarra'},
+  {g:'SAB', v1:'Camminata', v2:'Camminata'},
+  {g:'DOM', v1:'Riposo', v2:'Riposo'}
+];
+
+/* ============ IMPOSTAZIONI ============ */
+const S = {voce:true, bip:true, modo:'auto', ritmo:1, fase:1, variante:1, voceNome:null, velocita:1};
+const mem = {};
+let dovesalvo = 'memoria';
+const store = {
+  async get(k){
+    try{ if(window.storage){ const r = await window.storage.get('lg_' + k); if(r) return JSON.parse(r.value); } }catch(e){}
+    try{ const v = localStorage.getItem('lg_' + k); if(v !== null) return JSON.parse(v); }catch(e){}
+    return k in mem ? mem[k] : null;
+  },
+  async set(k, v){
+    mem[k] = v;
+    try{ if(window.storage){ await window.storage.set('lg_' + k, JSON.stringify(v)); dovesalvo = 'Claude'; } }catch(e){}
+    try{ localStorage.setItem('lg_' + k, JSON.stringify(v)); if(dovesalvo === 'memoria') dovesalvo = 'telefono'; }catch(e){}
+  }
+};
+function provaSalvataggio(){
+  try{ localStorage.setItem('lg_test','1'); localStorage.removeItem('lg_test'); return 'telefono'; }catch(e){}
+  return window.storage ? 'Claude' : 'memoria';
+}
+
+/* ============ AUDIO ============ */
+let ctx = null, voceIT = null;
+function initAudio(){
+  try{
+    if(!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if(ctx.state === 'suspended') ctx.resume();
+  }catch(e){}
+  if('speechSynthesis' in window){
+    scegliVoce();
+    try{ const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); }catch(e){}
+  }
+}
+let vociIT = [];
+function qualita(v){
+  const n = (v.name || '').toLowerCase();
+  let p = 0;
+  if(/premium|enhanced|migliorat|neural|natural|siri/.test(n)) p += 8;
+  if(/network|rete|online|wavenet|studio/.test(n)) p += 6;
+  if(/google/.test(n)) p += 4;
+  if(v.localService === false) p += 3;
+  if(/compact|compatt|eloquence|espeak|pico/.test(n)) p -= 10;
+  return p;
+}
+function etichetta(v){
+  const n = v.name.replace(/\s*\(.*?\)\s*/g, ' ').trim() || v.name;
+  const q = qualita(v);
+  let tag = '';
+  if(/premium|enhanced|migliorat|neural|natural|siri/i.test(v.name)) tag = ' · migliorata';
+  else if(v.localService === false || /network|online/i.test(v.name)) tag = ' · rete';
+  return (q >= 6 ? '★ ' : '') + n + tag;
+}
+function scegliVoce(){
+  try{
+    const tutte = speechSynthesis.getVoices();
+    if(!tutte.length) return;
+    vociIT = tutte.filter(x => (x.lang || '').toLowerCase().startsWith('it'));
+    if(!vociIT.length) vociIT = tutte.slice();
+    vociIT.sort((a, b) => qualita(b) - qualita(a) || a.name.localeCompare(b.name));
+    voceIT = vociIT.find(v => v.name === S.voceNome) || vociIT[0];
+    S.voceNome = voceIT.name;
+    popolaVoci();
+  }catch(e){}
+}
+function popolaVoci(){
+  const s = el('sel-voce');
+  if(!s) return;
+  if(!vociIT.length){
+    s.innerHTML = '<option>Nessuna voce trovata</option>';
+    el('voce-hint').textContent = 'Il telefono non espone voci al browser';
+    return;
+  }
+  s.innerHTML = vociIT.map(v => `<option value="${v.name.replace(/"/g,'&quot;')}"${v.name===S.voceNome?' selected':''}>${etichetta(v)}</option>`).join('');
+  el('voce-hint').textContent = vociIT.length + ' voci sul telefono · ★ = più naturale';
+}
+if('speechSynthesis' in window) speechSynthesis.addEventListener('voiceschanged', scegliVoce);
+
+function bip(f=880, d=.13, vol=.32, tipo='square'){
+  if(!S.bip || !ctx) return;
+  try{
+    const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = tipo; o.frequency.value = f;
+    g.gain.setValueAtTime(.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + .012);
+    g.gain.exponentialRampToValueAtTime(.0001, t + d);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(t); o.stop(t + d + .03);
+  }catch(e){}
+}
+const bipVia   = () => { bip(660,.1,.3); setTimeout(()=>bip(990,.22,.34), 130); };
+const bipStop  = () => { bip(420,.22,.3,'sawtooth'); };
+const bipConto = () => { bip(1180,.07,.26); };
+const bipFine  = () => { bip(523,.16,.3); setTimeout(()=>bip(659,.16,.3),170); setTimeout(()=>bip(880,.4,.32),340); };
+
+function parla(txt){
+  if(!S.voce || !('speechSynthesis' in window)) return;
+  try{
+    speechSynthesis.cancel();
+    setTimeout(()=>{
+      const u = new SpeechSynthesisUtterance(txt);
+      u.lang = 'it-IT'; u.rate = S.velocita; u.pitch = .96; u.volume = 1;
+      if(voceIT) u.voice = voceIT;
+      speechSynthesis.speak(u);
+    }, 70);
+  }catch(e){}
+}
+
+/* ============ COSTRUZIONE CODA ============ */
+function costruisci(sess){
+  const q = [];
+  q.push({type:'prep', dur:10});
+  sess.blocchi.forEach((b, bi) => {
+    for(let g = 1; g <= b.giri; g++){
+      b.esercizi.forEach((e, ei) => {
+        const dur = e.tipo === 'rip' ? Math.round(e.t * S.ritmo) : e.t;
+        q.push({type:'work', e, dur, giro:g, giri:b.giri, blocco:bi});
+        const ultimoEs = ei === b.esercizi.length - 1;
+        const ultimoGiro = g === b.giri;
+        const ultimoBlocco = bi === sess.blocchi.length - 1;
+        if(ultimoEs && ultimoGiro){
+          if(!ultimoBlocco) q.push({type:'rest', dur:b.riposoGiro || 60});
+        }else if(ultimoEs){
+          q.push({type:'rest', dur:b.riposoGiro, giroDopo:g + 1, giri:b.giri});
+        }else if(b.riposoEs > 0){
+          q.push({type:'rest', dur:b.riposoEs});
+        }
+      });
+    }
+  });
+  q.push({type:'done'});
+  for(let i = 0; i < q.length; i++){
+    if(q[i].type === 'rest' || q[i].type === 'prep'){
+      for(let j = i + 1; j < q.length; j++){ if(q[j].type === 'work'){ q[i].next = q[j]; break; } }
+    }
+  }
+  const lavori = q.filter(s => s.type === 'work');
+  lavori.forEach((s, i) => { s.n = i + 1; s.tot = lavori.length; });
+  return q;
+}
+
+/* ============ MOTORE ============ */
+function adattaNome(t){
+  const n = el('nome');
+  n.textContent = t;
+  const larg = Math.min(window.innerWidth, 620) - 34;
+  const alt = window.innerHeight;
+  const parole = t.split(/\s+/);
+  const piuLunga = Math.max(...parole.map(x => x.length));
+  const stretto = piuLunga > 11;
+  const perChar = stretto ? .56 : .62;
+  n.style.fontVariationSettings = stretto ? "'wdth' 84,'wght' 900" : "'wdth' 112,'wght' 900";
+  const daParola = larg / (piuLunga * perChar);
+  const daTotale = t.length <= 14 ? 999 : t.length <= 24 ? 46 : t.length <= 34 ? 38 : 32;
+  const daAltezza = alt * .075;
+  const px = Math.max(20, Math.min(daParola, daTotale, Math.max(30, daAltezza), 62));
+  n.style.fontSize = px.toFixed(1) + 'px';
+}
+
+const R = {q:[], i:0, fineA:0, rimasti:0, inPausa:false, tick:null, sec:null, sess:null, avvio:0, su:false};
+const el = id => document.getElementById(id);
+const runEl = el('run');
+
+function apri(sess){
+  R.sess = sess; R.q = costruisci(sess); R.i = 0; R.inPausa = false; R.avvio = Date.now();
+  runEl.classList.add('on'); runEl.classList.remove('pausa');
+  document.body.style.overflow = 'hidden';
+  initAudio(); wake();
+  vaiA(0);
+}
+
+function chiudi(){
+  clearInterval(R.tick); R.tick = null;
+  runEl.classList.remove('on'); document.body.style.overflow = '';
+  try{ speechSynthesis.cancel(); }catch(e){}
+  rilasciaWake();
+}
+
+function vaiA(i){
+  clearInterval(R.tick); R.tick = null;
+  if(i < 0) i = 0;
+  R.i = i;
+  const s = R.q[i];
+  if(!s) return chiudi();
+  R.sec = null;
+
+  if(s.type === 'done'){
+    runEl.dataset.stato = 'done';
+    el('stato').textContent = 'Finito';
+    adattaNome('Sessione completata');
+    el('rip').textContent = durataTot();
+    el('nota').textContent = R.sess.id === 'A' || R.sess.id === 'B' ? 'Non recuperare quelle che salti: riprendi dalla prossima.' : '';
+    el('tempo').textContent = '✓';
+    el('dopo').textContent = '';
+    el('pos').textContent = R.sess.nome;
+    el('barra').style.width = '100%';
+    const poi = R.sess._poi;
+    if(poi){
+      adattaNome('Riscaldamento fatto');
+      el('nota').textContent = 'Pronto per ' + poi.nome.toLowerCase() + '.';
+      el('avanti').textContent = 'Vai con ' + poi.nome;
+      bipFine(); parla('Riscaldamento finito. Quando sei pronto, si comincia.');
+    }else{
+      el('avanti').textContent = 'Chiudi';
+      bipFine(); parla('Allenamento completato. Bravo.');
+    }
+    salvaFatto();
+    return;
+  }
+
+  const manuale = s.type === 'work' && s.e.tipo === 'rip' && S.modo === 'manuale';
+  R.rimasti = s.dur;
+  R.fineA = Date.now() + s.dur * 1000;
+  R.manuale = manuale;
+  R.inizioManuale = Date.now();
+
+  runEl.dataset.stato = s.type === 'work' ? 'work' : 'rest';
+  el('avanti').textContent = s.type === 'work' ? (manuale ? 'Fatto' : 'Avanti') : 'Salta riposo';
+
+  if(s.type === 'prep'){
+    el('stato').textContent = 'Si parte';
+    adattaNome(R.sess.nome);
+    el('rip').textContent = '';
+    el('nota').textContent = R.sess.nota || '';
+    el('dopo').textContent = s.next ? 'Si comincia con: ' + s.next.e.n : '';
+    el('pos').textContent = R.sess.sottotitolo || '';
+    parla('Si parte con ' + R.sess.nome + '. Primo esercizio: ' + s.next.e.n + '.');
+  }
+  else if(s.type === 'work'){
+    const e = s.e;
+    el('stato').textContent = s.giri > 1 ? 'Giro ' + s.giro + ' di ' + s.giri : 'Lavoro';
+    adattaNome(e.n);
+    el('rip').textContent = e.r ? e.r : (e.tipo === 'rip' ? '' : formatta(e.t));
+    el('nota').textContent = e.d || '';
+    el('dopo').textContent = prossimoTesto(s);
+    el('pos').textContent = 'Esercizio ' + s.n + ' / ' + s.tot;
+    bipVia();
+    parla(e.n + (e.say ? ', ' + e.say : (e.tipo === 'rip' ? '' : ', ' + parlaTempo(e.t))) + '. Via.');
+  }
+  else if(s.type === 'rest'){
+    el('stato').textContent = 'Riposo';
+    adattaNome(s.next ? s.next.e.n : 'Pausa');
+    el('rip').textContent = s.next && s.next.e.r ? s.next.e.r : '';
+    el('nota').textContent = s.next && s.next.e.d ? s.next.e.d : '';
+    el('dopo').textContent = s.giroDopo ? 'Poi giro ' + s.giroDopo + ' di ' + s.giri : 'Prossimo esercizio';
+    el('pos').textContent = 'Riposo ' + s.dur + '"';
+    bipStop();
+    let t = 'Riposo ' + s.dur + ' secondi.';
+    if(s.giroDopo) t += ' Poi giro ' + s.giroDopo + '.';
+    if(s.next) t += ' Prossimo: ' + s.next.e.n + (s.next.e.say ? ', ' + s.next.e.say : '') + '.';
+    parla(t);
+  }
+
+  disegna();
+  R.tick = setInterval(passo, 120);
+}
+
+function prossimoTesto(s){
+  for(let j = R.i + 1; j < R.q.length; j++){
+    const x = R.q[j];
+    if(x.type === 'work') return 'Poi: ' + x.e.n;
+    if(x.type === 'done') return 'Ultimo esercizio';
+  }
+  return '';
+}
+
+function passo(){
+  if(R.inPausa) return;
+  const s = R.q[R.i];
+  if(R.manuale){
+    R.rimasti = -Math.floor((Date.now() - R.inizioManuale) / 1000);
+    disegna();
+    return;
+  }
+  const ms = R.fineA - Date.now();
+  R.rimasti = Math.max(0, Math.ceil(ms / 1000));
+  const sec = R.rimasti;
+  if(sec !== R.sec){
+    R.sec = sec;
+    if(sec <= 3 && sec >= 1){ bipConto(); flash(); }
+    if(sec === 10 && s.dur >= 25 && s.type !== 'work') parla('Dieci secondi.');
+    if(sec === 10 && s.type === 'work' && s.dur >= 40) parla('Dieci secondi.');
+  }
+  disegna();
+  if(ms <= 0) vaiA(R.i + 1);
+}
+
+function disegna(){
+  const s = R.q[R.i];
+  el('tempo').textContent = R.manuale ? formatta(Math.abs(R.rimasti)) : formatta(R.rimasti);
+  if(R.manuale){ el('barra').style.width = '100%'; return; }
+  const pct = s.dur ? Math.max(0, Math.min(100, (R.rimasti / s.dur) * 100)) : 0;
+  el('barra').style.width = pct + '%';
+}
+
+function formatta(sec){
+  sec = Math.max(0, Math.round(sec));
+  const m = Math.floor(sec / 60), r = sec % 60;
+  return m > 0 ? m + ':' + String(r).padStart(2, '0') : String(r);
+}
+function parlaTempo(t){ return t >= 60 ? Math.round(t/60) + ' minuti' : t + ' secondi'; }
+function durataTot(){
+  const m = Math.round((Date.now() - R.avvio) / 60000);
+  return m + (m === 1 ? ' minuto' : ' minuti');
+}
+function flash(){
+  const t = el('tempo');
+  t.classList.remove('pulse'); void t.offsetWidth; t.classList.add('pulse');
+}
+
+/* wake lock */
+let wl = null;
+async function wake(){ try{ wl = await navigator.wakeLock.request('screen'); }catch(e){} }
+function rilasciaWake(){ try{ wl && wl.release(); wl = null; }catch(e){} }
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible' && runEl.classList.contains('on')) wake();
+});
+
+/* comandi */
+el('avanti').onclick = () => {
+  const s = R.q[R.i];
+  if(s.type === 'done'){
+    const poi = R.sess._poi;
+    if(poi){ R.sess._poi = null; return apri(poi); }
+    return chiudi();
+  }
+  vaiA(R.i + 1);
+};
+el('indietro').onclick = () => {
+  let j = R.i - 1;
+  while(j > 0 && R.q[j].type === 'rest') j--;
+  vaiA(Math.max(0, j));
+};
+el('piu').onclick = () => { R.fineA += 15000; R.rimasti += 15; disegna(); bip(700,.08,.2); };
+el('pausa').onclick = () => {
+  R.inPausa = !R.inPausa;
+  runEl.classList.toggle('pausa', R.inPausa);
+  el('pausa').textContent = R.inPausa ? 'Riprendi' : 'Pausa';
+  if(R.inPausa){ R.pausaDa = Date.now(); try{ speechSynthesis.cancel(); }catch(e){} }
+  else {
+    const fermo = Date.now() - (R.pausaDa || Date.now());
+    R.fineA = Date.now() + R.rimasti * 1000;
+    R.inizioManuale += fermo;
+  }
+};
+el('chiudi').onclick = chiudi;
+document.addEventListener('keydown', e => {
+  if(!runEl.classList.contains('on')) return;
+  if(e.code === 'Space'){ e.preventDefault(); el('pausa').click(); }
+  if(e.code === 'ArrowRight'){ e.preventDefault(); el('avanti').click(); }
+  if(e.code === 'ArrowLeft'){ e.preventDefault(); el('indietro').click(); }
+  if(e.code === 'Escape') chiudi();
+});
+
+/* ============ HOME ============ */
+function sessioniDisponibili(){
+  return [RISC, SESS_A, SESS_B, sbarraSess(S.fase), STRETCH];
+}
+
+function disegnaLista(){
+  const box = el('lista');
+  box.innerHTML = '';
+  sessioniDisponibili().forEach(sess => {
+    const c = document.createElement('div');
+    c.className = 'card';
+    const es = sess.blocchi.flatMap(b => b.esercizi.map(e => ({e, giri:b.giri})));
+    c.innerHTML = `
+      <button class="intestazione">
+        <span class="nome"><strong>${sess.nome}</strong><em>${sess.sottotitolo} · ${sess.durata}</em></span>
+        <span class="chev">›</span>
+      </button>
+      <div class="dettaglio">
+        <p class="nota">${sess.nota || ''}</p>
+        ${es.map(({e, giri}) => `
+          <div class="riga">
+            <span><a href="${yt(e.video || e.n)}" target="_blank" rel="noopener">${e.n}</a><i>${e.d || ''}</i></span>
+            <span class="val">${giri > 1 ? giri + ' × ' : ''}${e.r || formatta(e.t) + '"'}</span>
+          </div>`).join('')}
+        ${sess.id.startsWith('sbarra') ? `
+        <div class="fasi" role="group" aria-label="Fase sbarra">
+          ${[1,2,3].map(f => `<button data-fase="${f}" aria-pressed="${S.fase===f}">Fase ${f}</button>`).join('')}
+        </div>` : ''}
+        <button class="avvia">Inizia ${sess.nome.toLowerCase()}</button>
+      </div>`;
+    c.querySelector('.intestazione').onclick = () => c.classList.toggle('aperta');
+    c.querySelector('.avvia').onclick = () => apri(sess);
+    c.querySelectorAll('[data-fase]').forEach(b => b.onclick = () => {
+      S.fase = +b.dataset.fase; store.set('fase', S.fase); disegnaLista();
+      const nuova = document.querySelectorAll('.card')[3]; if(nuova) nuova.classList.add('aperta');
+    });
+    box.appendChild(c);
+  });
+}
+
+let giornoScelto = null;
+const NOMI_G = ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'];
+const oggiIdx = () => (new Date().getDay() + 6) % 7;
+const giornoAttivo = () => giornoScelto === null ? oggiIdx() : giornoScelto;
+
+function pezziGiorno(testo){
+  if(testo === 'Riposo') return {big:'—', sub:'riposo'};
+  if(testo === 'Camminata') return {big:'~', sub:'camm.'};
+  if(testo.includes('+')) return {big:testo[0], sub:'+ sbarra'};
+  return {big:testo, sub:'casa'};
+}
+
+function disegnaSettimana(){
+  const oggi = oggiIdx(), att = giornoAttivo();
+  el('settimana').innerHTML = SETTIMANA.map((d, i) => {
+    const testo = S.variante === 1 ? d.v1 : d.v2;
+    const p = pezziGiorno(testo);
+    const cls = [i === oggi ? 'oggi-g' : '', i === att && giornoScelto !== null ? 'scelto-g' : '', testo === 'Riposo' ? 'riposo-g' : ''].join(' ');
+    return `<button class="giorno ${cls}" data-g="${i}" aria-label="${NOMI_G[i]}, ${testo}">
+      <b>${d.g}</b><span>${p.big}</span><i>${p.sub}</i></button>`;
+  }).join('');
+  el('settimana').querySelectorAll('[data-g]').forEach(b => b.onclick = () => {
+    const i = +b.dataset.g;
+    giornoScelto = (giornoScelto === i || (giornoScelto === null && i === oggiIdx())) ? null : i;
+    disegnaOggi(); disegnaSettimana();
+  });
+}
+
+function disegnaOggi(){
+  const i = giornoAttivo();
+  const testo = S.variante === 1 ? SETTIMANA[i].v1 : SETTIMANA[i].v2;
+  el('oggi-giorno').textContent = giornoScelto === null ? 'Oggi · ' + NOMI_G[i].toLowerCase() : NOMI_G[i];
+  el('btn-settimana').textContent = 'Settimana ' + S.variante;
+
+  const nota = el('nota-giorno');
+  if(giornoScelto !== null && giornoScelto !== oggiIdx()){
+    nota.hidden = false;
+    nota.innerHTML = `<span>Stai guardando ${NOMI_G[i].toLowerCase()}, oggi è ${NOMI_G[oggiIdx()].toLowerCase()}</span><button id="reset-g">Torna a oggi</button>`;
+    el('reset-g').onclick = () => { giornoScelto = null; disegnaOggi(); disegnaSettimana(); };
+  }else{
+    nota.hidden = true;
+  }
+
+  const btn = el('oggi-vai'), sec = el('oggi-secondo');
+  sec.hidden = true;
+  if(testo === 'Riposo'){
+    el('oggi-titolo').textContent = 'Riposo';
+    el('oggi-durata').textContent = 'Cammina se ti va. Oppure scegli un altro giorno qui sotto.';
+    btn.textContent = 'Fai lo stretching';
+    btn.onclick = () => apri(STRETCH);
+  }else if(testo === 'Camminata'){
+    el('oggi-titolo').textContent = 'Camminata';
+    el('oggi-durata').textContent = '30-40 min · circa 8000 passi al giorno';
+    btn.textContent = 'Fai lo stretching';
+    btn.onclick = () => apri(STRETCH);
+  }else{
+    const sess = testo.startsWith('A') ? SESS_A : SESS_B;
+    const conSbarra = testo.includes('Sbarra');
+    el('oggi-titolo').textContent = sess.nome + (conSbarra ? ' + sbarra' : '');
+    el('oggi-durata').textContent = conSbarra ? 'Riscaldamento, casa, parco · ~70 min' : sess.sottotitolo + ' · ' + sess.durata;
+    btn.textContent = 'Inizia dal riscaldamento';
+    btn.onclick = () => { RISC._poi = sess; apri(RISC); };
+    if(conSbarra){
+      sec.hidden = false;
+      sec.textContent = 'Vai diretto alla sbarra · fase ' + S.fase;
+      sec.onclick = () => apri(sbarraSess(S.fase));
+    }
+  }
+}
+
+/* ---- storico ---- */
+let LOG = [];
+function disegnaStorico(){
+  const box = el('storico');
+  const ora = Date.now();
+  const ultimi7 = LOG.filter(x => ora - new Date(x.d).getTime() < 7 * 864e5).length;
+  const ultimi30 = LOG.filter(x => ora - new Date(x.d).getTime() < 30 * 864e5).length;
+  const minuti = LOG.filter(x => ora - new Date(x.d).getTime() < 30 * 864e5).reduce((a, x) => a + (x.min || 0), 0);
+  let html = `<div class="conteggio">
+      <div><strong>${ultimi7}</strong><em>ultimi 7 giorni</em></div>
+      <div><strong>${ultimi30}</strong><em>ultimi 30 giorni</em></div>
+      <div><strong>${minuti}</strong><em>minuti nel mese</em></div>
+    </div>`;
+  if(!LOG.length){
+    html += `<p class="vuoto">Nessuna sessione registrata.<br>Quando arrivi in fondo a una sessione finisce qui dentro.</p>`;
+  }else{
+    html += LOG.slice(0, 12).map(x => {
+      const d = new Date(x.d);
+      const g = NOMI_G[(d.getDay() + 6) % 7].slice(0, 3).toLowerCase();
+      const data = d.getDate() + '/' + (d.getMonth() + 1);
+      const ora = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+      return `<div class="storia"><b>${x.s}<i>${g} ${data} · ${ora}</i></b><span>${x.min || 0} min</span></div>`;
+    }).join('');
+    if(LOG.length > 12) html += `<p class="vuoto">e altre ${LOG.length - 12} sessioni salvate.</p>`;
+  }
+  box.innerHTML = html;
+  const dove = provaSalvataggio();
+  el('storico-stato').textContent = dove === 'telefono'
+    ? 'Salvato su questo telefono, resta anche chiudendo'
+    : dove === 'Claude' ? 'Salvato nell\'anteprima di Claude' : 'Solo in memoria: si perde chiudendo';
+}
+
+el('esporta').onclick = () => {
+  const testo = JSON.stringify(LOG, null, 2);
+  try{
+    const b = new Blob([testo], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(b);
+    a.download = 'allenamenti-' + new Date().toISOString().slice(0, 10) + '.json';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }catch(e){
+    try{ navigator.clipboard.writeText(testo); alert('Storico copiato negli appunti.'); }
+    catch(e2){ alert(testo); }
+  }
+};
+el('svuota').onclick = async () => {
+  if(!confirm('Cancello tutto lo storico?')) return;
+  LOG = []; await store.set('log', LOG); disegnaStorico();
+};
+
+/* impostazioni */
+function bindSwitch(id, chiave){
+  const b = el(id);
+  b.onclick = () => {
+    S[chiave] = !S[chiave];
+    b.setAttribute('aria-pressed', S[chiave]);
+    store.set(chiave, S[chiave]);
+    if(S[chiave]){ initAudio(); chiave === 'bip' ? bipVia() : parla('Voce attiva'); }
+  };
+}
+bindSwitch('sw-voce','voce');
+bindSwitch('sw-bip','bip');
+function bindSeg(id, chiave, cast){
+  el(id).querySelectorAll('button').forEach(b => b.onclick = () => {
+    S[chiave] = cast(b.dataset.v);
+    store.set(chiave, S[chiave]);
+    el(id).querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
+  });
+}
+bindSeg('seg-modo','modo', v => v);
+bindSeg('seg-ritmo','ritmo', v => parseFloat(v));
+bindSeg('seg-vel','velocita', v => parseFloat(v));
+el('seg-vel').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+  initAudio(); parla('Rematore con manubrio, 12 per braccio. Via.');
+}));
+el('sel-voce').onchange = e => {
+  S.voceNome = e.target.value;
+  voceIT = vociIT.find(v => v.name === S.voceNome) || voceIT;
+  store.set('voceNome', S.voceNome);
+  initAudio();
+  parla('Goblet squat, 15 ripetizioni. Via.');
+};
+el('prova').onclick = () => { initAudio(); scegliVoce(); bipVia(); parla('Goblet squat, 15 ripetizioni. Via.'); };
+
+el('btn-settimana').onclick = () => { S.variante = S.variante === 1 ? 2 : 1; store.set('variante', S.variante); disegnaOggi(); disegnaSettimana(); };
+
+async function salvaFatto(){
+  if(R.sess.id === 'risc' && R.sess._poi) return;
+  const min = Math.max(1, Math.round((Date.now() - R.avvio) / 60000));
+  LOG.unshift({d:new Date().toISOString(), s:R.sess.nome, min});
+  LOG = LOG.slice(0, 200);
+  await store.set('log', LOG);
+  disegnaStorico();
+}
+
+/* avvio */
+(async () => {
+  for(const k of ['voce','bip','modo','ritmo','fase','variante','voceNome','velocita']){
+    const v = await store.get(k);
+    if(v !== null && v !== undefined) S[k] = v;
+  }
+  el('sw-voce').setAttribute('aria-pressed', S.voce);
+  el('sw-bip').setAttribute('aria-pressed', S.bip);
+  el('seg-modo').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === S.modo));
+  el('seg-ritmo').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', parseFloat(b.dataset.v) === S.ritmo));
+  el('seg-vel').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', parseFloat(b.dataset.v) === S.velocita));
+  scegliVoce();
+  setTimeout(scegliVoce, 400);
+  setTimeout(scegliVoce, 1500);
+  LOG = (await store.get('log')) || [];
+  disegnaOggi(); disegnaSettimana(); disegnaLista(); disegnaStorico();
+  window.addEventListener('resize', () => { if(runEl.classList.contains('on')) adattaNome(el('nome').textContent); });
+})();
+</script>
+</body>
+</html>
