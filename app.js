@@ -235,10 +235,11 @@ function costruisci(sess){
     b.esercizi.forEach((e, ei) => {
       const dur = e.tipo === 'rip' ? Math.round(e.t * S.ritmo) : e.t;
       const ultimoEs = ei === b.esercizi.length - 1;
-      for(let k = 1; k <= b.serie; k++){
-        q.push({type:'work', e, dur, serie:k, serieTot:b.serie, blocco:bi});
-        if(k < b.serie){
-          q.push({type:'rest', dur:b.riposoSerie, serieDopo:k + 1, serieTot:b.serie});
+      const nSerie = e.serie ?? b.serie;
+      for(let k = 1; k <= nSerie; k++){
+        q.push({type:'work', e, dur, serie:k, serieTot:nSerie, blocco:bi});
+        if(k < nSerie){
+          q.push({type:'rest', dur:e.riposo ?? b.riposoSerie, serieDopo:k + 1, serieTot:nSerie});
           continue;
         }
         // ultima serie: riposo prima dell'esercizio (o del blocco) che segue, più il tempo di cambio
@@ -325,7 +326,7 @@ function apri(sess, opz = {}){
 function prepara(sess, opz){
   R.sess = sess; R.q = costruisci(sess); R.i = 0; R.inPausa = false; R.avvio = Date.now(); R.fine = 0;
   R.poi = opz.poi || null; R.riscMs = opz.riscMs || 0; R.riscAvvio = opz.riscAvvio || 0;
-  R.pausaTot = 0; R.fatti = new Set(); R.salvato = false;
+  R.pausaTot = 0; R.fatti = new Set(); R.salvato = false; R.ultimoRec = null;
   const rip = opz.ripresa;
   if(rip){
     // il tempo passato ad app chiusa conta come pausa
@@ -378,7 +379,7 @@ function vaiA(i, opz = {}){
       if(!giaSuonato) bipFine();
       parla('Riscaldamento finito. Quando sei pronto, si comincia.');
     }else{
-      el('avanti').textContent = 'Chiudi';
+      el('avanti').textContent = conQuestionario(R.sess) ? "Com'è andata" : 'Chiudi';
       if(!giaSuonato) bipFine();
       parla('Allenamento completato. Bravo.');
     }
@@ -536,7 +537,7 @@ function coloreBarra(){
 const CHIAVE_RIPRESA = 'lg2_inCorso';
 const RIPRESA_MAX = 6 * 3600e3;
 // versione della coda: un indice salvato con una coda diversa (circuito → serie) non si riprende
-const RIPRESA_V = 2;
+const RIPRESA_V = 3;
 
 function sessioneDaId(id){
   if(!id) return null;
@@ -611,7 +612,10 @@ el('avanti').onclick = () => {
   if(s.type === 'done'){
     const poi = R.poi;
     if(poi) return apri(poi, {riscMs:tempoEffettivo(), riscAvvio:R.avvio});
-    return chiudi();
+    const rec = R.ultimoRec, sess = R.sess;
+    chiudi();
+    if(conQuestionario(sess) && rec) apriQuestionario(sess, rec);
+    return;
   }
   vaiA(R.i + 1);
 };
@@ -657,6 +661,92 @@ document.addEventListener('keydown', e => {
   if(e.code === 'Escape') esci();
 });
 
+/* ============ QUESTIONARIO ============
+   A fine sessione (A, B, sbarra) chiedo la serie migliore di ogni esercizio
+   (ripetizioni, secondi o metri) e il peso usato. Finisce nel record della
+   sessione, campo feedback, e da lì precompila la volta successiva.     */
+const conQuestionario = sess => sess.id === 'A' || sess.id === 'B' || sess.id.startsWith('sbarra');
+const UNITA = {rip:'rip', s:'sec', m:'m'};
+const Q = {rec:null, righe:[], fatica:null};
+
+function eserciziQuestionario(sess){
+  const visti = new Set();
+  return sess.blocchi.flatMap(b => b.esercizi)
+    .filter(e => (e.tipo === 'rip' || e.misura) && !visti.has(e.n) && visti.add(e.n));
+}
+// il valore più recente registrato per un esercizio (LOG è dal più recente)
+function ultimoFeedback(n){
+  for(const x of LOG){
+    const f = x.feedback && x.feedback.esercizi && x.feedback.esercizi.find(y => y.n === n);
+    if(f) return f;
+  }
+  return null;
+}
+const numero = v => { const x = parseFloat(String(v).replace(',', '.')); return isFinite(x) && x >= 0 ? x : null; };
+const testoFb = f => (f.fatto != null ? f.fatto : '–') + (f.misura === 's' ? '"' : f.misura === 'm' ? ' m' : '') + (f.kg ? ' × ' + f.kg + ' kg' : '');
+
+function apriQuestionario(sess, rec){
+  Q.rec = rec; Q.fatica = null;
+  Q.righe = eserciziQuestionario(sess).map(e => {
+    const misura = e.misura || 'rip';
+    const obiettivo = e.r || e.t + '"';
+    const prima = ultimoFeedback(e.n);
+    return {e, misura, obiettivo, prima, passo:misura === 'rip' ? 1 : 5,
+            fatto:prima && prima.fatto != null ? prima.fatto : (parseInt(e.r) || e.t),
+            kg:e.kg ? (prima && prima.kg != null ? prima.kg : '') : null};
+  });
+  el('q-titolo').textContent = sess.nome;
+  el('q-esercizi').innerHTML = Q.righe.map((r, i) => `
+    <div class="q-riga">
+      <div class="q-nome"><b>${esc(r.e.n)}</b><i>obiettivo ${esc(r.obiettivo)}${r.prima ? ' · l\'ultima volta ' + esc(testoFb(r.prima)) : ''}</i></div>
+      <div class="q-campi">
+        <div class="q-step">
+          <button type="button" data-i="${i}" data-d="-1" aria-label="Meno">−</button>
+          <input id="q-fatto-${i}" inputmode="numeric" value="${r.fatto}" aria-label="${esc(r.e.n)}: ${UNITA[r.misura]} fatte">
+          <span>${UNITA[r.misura]}</span>
+          <button type="button" data-i="${i}" data-d="1" aria-label="Più">+</button>
+        </div>
+        ${r.kg !== null ? `<label class="q-kg"><input id="q-kg-${i}" inputmode="decimal" value="${r.kg}" placeholder="–" aria-label="${esc(r.e.n)}: chili"><span>kg</span></label>` : ''}
+      </div>
+    </div>`).join('');
+  el('q-esercizi').querySelectorAll('.q-step button').forEach(b => b.onclick = () => {
+    const r = Q.righe[+b.dataset.i], inp = el('q-fatto-' + b.dataset.i);
+    inp.value = Math.max(0, (numero(inp.value) ?? 0) + (+b.dataset.d) * r.passo);
+  });
+  el('q-fatica').innerHTML = Array.from({length:10}, (_, i) => `<button type="button" data-v="${i + 1}" aria-pressed="false">${i + 1}</button>`).join('');
+  el('q-fatica').querySelectorAll('button').forEach(b => b.onclick = () => {
+    Q.fatica = Q.fatica === +b.dataset.v ? null : +b.dataset.v;
+    el('q-fatica').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', +x.dataset.v === Q.fatica));
+  });
+  el('q-nota').value = '';
+  el('questionario').hidden = false;
+  el('questionario').scrollTop = 0;
+  document.body.style.overflow = 'hidden';
+}
+function chiudiQuestionario(){
+  el('questionario').hidden = true;
+  document.body.style.overflow = '';
+  Q.rec = null;
+}
+el('q-salta').onclick = chiudiQuestionario;
+el('q-salva').onclick = async () => {
+  const rec = Q.rec;
+  if(!rec) return chiudiQuestionario();
+  rec.feedback = {
+    fatica: Q.fatica,
+    nota: el('q-nota').value.trim() || null,
+    esercizi: Q.righe.map((r, i) => {
+      const f = {n:r.e.n, obiettivo:r.obiettivo, fatto:numero(el('q-fatto-' + i).value)};
+      if(r.misura !== 'rip') f.misura = r.misura;
+      if(r.kg !== null) f.kg = numero(el('q-kg-' + i).value);
+      return f;
+    })
+  };
+  chiudiQuestionario();
+  try{ await DB.metti('sessioni', rec); }catch(e){}
+  await ricaricaStorico();
+};
+
 /* ============ HOME ============ */
 function sessioniDisponibili(){
   return [RISC, SESS_A, SESS_B, sbarraSess(S.fase), STRETCH];
@@ -668,7 +758,7 @@ function disegnaLista(){
   sessioniDisponibili().forEach(sess => {
     const c = document.createElement('div');
     c.className = 'card';
-    const es = sess.blocchi.flatMap(b => b.esercizi.map(e => ({e, serie:b.serie})));
+    const es = sess.blocchi.flatMap(b => b.esercizi.map(e => ({e, serie:e.serie ?? b.serie})));
     c.innerHTML = `
       <button class="intestazione">
         <span class="nome"><strong>${sess.nome}</strong><em>${sess.sottotitolo} · ${sess.durata}</em></span>
@@ -795,9 +885,9 @@ el('sel-voce').onchange = e => {
   voceIT = vociIT.find(v => v.name === S.voceNome) || voceIT;
   store.set('voceNome', S.voceNome);
   initAudio();
-  parla('Goblet squat, 15 ripetizioni. Via.');
+  parla('Goblet squat, 12 ripetizioni. Via.');
 };
-el('prova').onclick = () => { initAudio(); scegliVoce(); bipVia(); parla('Goblet squat, 15 ripetizioni. Via.'); };
+el('prova').onclick = () => { initAudio(); scegliVoce(); bipVia(); parla('Goblet squat, 12 ripetizioni. Via.'); };
 
 // registra la sessione corrente; parziale = interrotta prima della fine
 async function salvaFatto(parziale){
@@ -816,6 +906,7 @@ async function salvaFatto(parziale){
     esercizi, eserciziTot: lavori.length, parziale, v:3
   };
   if(R.riscMs) rec.conRisc = true;
+  if(!parziale) R.ultimoRec = rec;
   if(parziale){
     // ultimo esercizio raggiunto: da lì ricavo blocco e serie
     let j = R.i;

@@ -1,6 +1,6 @@
 /* Service worker: precache di tutti gli asset, poi cache-first.
    Per pubblicare una nuova versione cambia VERSIONE: la cache vecchia viene cancellata in activate. */
-const VERSIONE = 'v6';
+const VERSIONE = 'v7';
 const CACHE = 'allenamento-' + VERSIONE;
 const ASSET = [
   './',

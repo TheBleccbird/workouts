@@ -299,3 +299,50 @@ h3.sez{
   font-family:var(--mono); font-size:.72rem; color:var(--grafite); background:var(--carta);
 }
 .svuota{margin-top:18px; color:var(--lavoro); background:transparent}
+
+/* ---------- QUESTIONARIO ---------- */
+#questionario{
+  position:fixed; inset:0; z-index:20; overflow-y:auto; overscroll-behavior:contain;
+  background:var(--cemento);
+  padding:max(18px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom));
+}
+#questionario[hidden]{display:none}
+.q-box{max-width:560px; margin:0 auto}
+.q-box h2{
+  font-size:clamp(1.5rem,7vw,2.2rem); line-height:.95; font-weight:900; text-transform:uppercase;
+  font-variation-settings:'wdth' 108,'wght' 900; margin:8px 0 8px;
+}
+.q-aiuto{font-family:var(--mono); font-size:.72rem; line-height:1.5; color:var(--grafite); margin-bottom:14px}
+#q-esercizi{margin-bottom:22px}
+.q-riga{
+  background:var(--carta); border:1px solid var(--linea); border-radius:10px;
+  padding:11px 12px; margin-bottom:6px;
+}
+.q-nome b{display:block; font-size:.92rem; font-weight:800; font-variation-settings:'wdth' 104,'wght' 800}
+.q-nome i{display:block; font-style:normal; font-family:var(--mono); font-size:.66rem; color:var(--grafite); margin-top:2px}
+.q-campi{display:flex; flex-wrap:wrap; gap:8px; margin-top:9px; align-items:center}
+.q-step{display:flex; align-items:center; border:1px solid var(--linea); border-radius:9px; overflow:hidden; background:var(--cemento)}
+.q-step button{width:42px; height:42px; font-size:1.2rem; font-weight:700}
+.q-step button:active{background:var(--linea)}
+.q-campi input{
+  font-family:var(--mono); font-size:1rem; font-variant-numeric:tabular-nums; text-align:center;
+  border:none; background:transparent; color:var(--inchiostro); width:3.2em; height:42px;
+}
+.q-step span, .q-kg span{font-family:var(--mono); font-size:.66rem; color:var(--grafite); padding-right:8px}
+.q-step input{border-left:1px solid var(--linea); border-right:1px solid var(--linea); background:var(--carta)}
+.q-kg{display:flex; align-items:center; border:1px solid var(--linea); border-radius:9px; background:var(--carta)}
+.q-fatica{display:grid; grid-template-columns:repeat(10,minmax(0,1fr)); gap:3px}
+.q-fatica button{
+  border:1px solid var(--linea); background:var(--carta); border-radius:7px; height:40px;
+  font-family:var(--mono); font-size:.8rem; color:var(--grafite);
+}
+.q-fatica button[aria-pressed="true"]{background:var(--lavoro); border-color:var(--lavoro); color:var(--crema)}
+.q-scala{display:flex; justify-content:space-between; font-family:var(--mono); font-size:.6rem; color:var(--grafite); margin:5px 0 16px}
+#q-nota{
+  width:100%; border:1px solid var(--linea); border-radius:9px; background:var(--carta); color:var(--inchiostro);
+  padding:10px 12px; font-family:var(--mono); font-size:.8rem; resize:vertical;
+}
+.q-bottoni{display:flex; gap:8px; margin-top:16px}
+.q-bottoni #q-salta{flex:none; padding:0 18px; border:1px solid var(--linea); border-radius:10px; font-family:var(--mono); font-size:.76rem; color:var(--grafite)}
+.q-bottoni .vai{flex:1}
+.storia .fb{display:block; font-style:normal; font-family:var(--mono); font-size:.64rem; font-weight:400; color:var(--inchiostro); margin-top:4px; line-height:1.5; overflow-wrap:anywhere}
