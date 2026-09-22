@@ -66,7 +66,17 @@ function rigaSessione(x){
   const parz = x.parziale
     ? `<em class="parz">parziale${arrivoTesto(x)}${x.esercizi != null ? ' · ' + x.esercizi + '/' + x.eserciziTot + (x.v >= 3 ? ' serie' : ' es.') : ''}</em>`
     : '';
-  return `<div class="storia"><b><span class="punto" style="background:${TIPI[tipoDi(x)].col}"></span>${esc(x.nome || x.s)}<i>${info}</i>${parz}</b><span>${x.min || 0} min</span></div>`;
+  return `<div class="storia"><b><span class="punto" style="background:${TIPI[tipoDi(x)].col}"></span>${esc(x.nome || x.s)}<i>${info}</i>${parz}${rigaFeedback(x)}</b><span>${x.min || 0} min</span></div>`;
+}
+
+// riepilogo del questionario di fine sessione (testoFb è in app.js)
+function rigaFeedback(x){
+  const f = x.feedback;
+  if(!f) return '';
+  const parti = (f.esercizi || []).filter(y => y.fatto != null).map(y => y.n + ' ' + testoFb(y));
+  if(f.fatica) parti.push('fatica ' + f.fatica + '/10');
+  if(f.nota) parti.push('“' + f.nota + '”');
+  return parti.length ? `<em class="fb">${esc(parti.join(' · '))}</em>` : '';
 }
 
 /* ---- riepilogo in home ---- */
