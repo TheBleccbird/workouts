@@ -38,6 +38,9 @@ async function ricaricaStorico(){
 }
 
 function disegnaStorico(){
+  // la prossima sessione e gli ultimi 7 giorni dipendono dallo storico
+  disegnaOggi();
+  disegnaUltimi();
   disegnaRiepilogoHome();
   disegnaConteggio();
   disegnaCalendario();
@@ -47,13 +50,21 @@ function disegnaStorico(){
   disegnaStatoDati();
 }
 
+// dove si era fermata una sessione parziale (v3: serie di fila; prima: giri del circuito)
+function arrivoTesto(x){
+  const a = x.arrivo;
+  if(!a) return '';
+  if(a.serieTot != null) return ' · es. ' + a.esercizio + (a.serieTot > 1 ? ', serie ' + a.serie + '/' + a.serieTot : '');
+  return ' · giro ' + a.giro + '/' + a.giri;
+}
+
 function rigaSessione(x){
   const d = new Date(x.d);
   const g = NOMI_G[(d.getDay() + 6) % 7].slice(0, 3).toLowerCase();
   let info = g + ' ' + d.getDate() + '/' + (d.getMonth() + 1) + ' · ' + oraDi(d);
   if(x.fase) info += ' · fase ' + x.fase;
   const parz = x.parziale
-    ? `<em class="parz">parziale${x.arrivo ? ' · giro ' + x.arrivo.giro + '/' + x.arrivo.giri : ''}${x.esercizi != null ? ' · ' + x.esercizi + '/' + x.eserciziTot + ' es.' : ''}</em>`
+    ? `<em class="parz">parziale${arrivoTesto(x)}${x.esercizi != null ? ' · ' + x.esercizi + '/' + x.eserciziTot + (x.v >= 3 ? ' serie' : ' es.') : ''}</em>`
     : '';
   return `<div class="storia"><b><span class="punto" style="background:${TIPI[tipoDi(x)].col}"></span>${esc(x.nome || x.s)}<i>${info}</i>${parz}</b><span>${x.min || 0} min</span></div>`;
 }
@@ -324,24 +335,24 @@ async function importa(file){
   alert(`Importazione fatta.\nSessioni aggiunte: ${r.aggiunte}\nGià presenti: ${r.presenti}` + (dati.scartate ? `\nNon valide, ignorate: ${dati.scartate}` : ''));
 }
 
-/* ---- navigazione: #storico ---- */
+/* ---- navigazione: #storico, #impostazioni ---- */
+const VISTE = {'#storico':'vista-storico', '#impostazioni':'vista-impostazioni'};
 let daHome = false;
 function mostraVista(){
-  const st = location.hash === '#storico';
-  el('home').hidden = st;
-  el('vista-storico').hidden = !st;
+  const vista = VISTE[location.hash] || 'home';
+  ['home', ...Object.values(VISTE)].forEach(id => { el(id).hidden = id !== vista; });
   window.scrollTo(0, 0);
 }
 
 function initStorico(){
   window.addEventListener('hashchange', mostraVista);
-  document.querySelector('.apri-storico').addEventListener('click', () => { daHome = true; });
-  document.querySelector('#vista-storico .indietro').onclick = e => {
+  document.querySelectorAll('.apri-storico, .apri-imp').forEach(a => a.addEventListener('click', () => { daHome = true; }));
+  document.querySelectorAll('main .indietro').forEach(a => a.onclick = e => {
     e.preventDefault();
     // torno indietro nella cronologia così il tasto Indietro di Android resta coerente
     if(daHome){ daHome = false; history.back(); }
     else{ history.replaceState(null, '', location.pathname); mostraVista(); }
-  };
+  });
   el('esporta').onclick = esporta;
   el('importa').onclick = () => el('file-importa').click();
   el('file-importa').onchange = e => {

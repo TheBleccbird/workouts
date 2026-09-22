@@ -34,7 +34,7 @@ button{font:inherit; color:inherit; background:none; border:none; cursor:pointer
 .eyebrow{font-family:var(--mono); font-size:.7rem; letter-spacing:.14em; text-transform:uppercase; color:var(--grafite)}
 
 /* ---------- HOME ---------- */
-#home, #vista-storico{max-width:560px; margin:0 auto; padding:22px 16px 60px; overflow-x:hidden}
+#home, #vista-storico, #vista-impostazioni{max-width:560px; margin:0 auto; padding:22px 16px 60px; overflow-x:hidden}
 main[hidden]{display:none}
 .top{display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-bottom:26px}
 .top h1{font-size:1.05rem; font-weight:900; font-variation-settings:'wdth' 112,'wght' 900; text-transform:uppercase; letter-spacing:.02em}
@@ -50,6 +50,11 @@ main[hidden]{display:none}
   border:1px solid rgba(247,243,233,.35); border-radius:99px; padding:6px 10px;
   color:var(--crema); white-space:nowrap; flex:none;
 }
+.apri-imp{
+  font-family:var(--mono); font-size:.66rem; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--inchiostro); text-decoration:none; border:1px solid var(--linea); border-radius:99px;
+  padding:7px 11px; white-space:nowrap; flex:none;
+}
 .oggi h2{
   font-size:clamp(1.7rem,8.4vw,2.7rem); line-height:.94; font-weight:900;
   font-variation-settings:'wdth' 108,'wght' 900; text-transform:uppercase;
@@ -64,7 +69,7 @@ main[hidden]{display:none}
 .vai:active{transform:translateY(1px)}
 .vai.ghost{background:transparent; color:var(--crema); border:1.5px solid rgba(247,243,233,.35); margin-top:8px; font-size:.85rem}
 
-.settimana{display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:3px; margin:18px 0 26px}
+.settimana{display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:3px; margin:0 0 26px}
 .giorno{
   background:var(--carta); border:1px solid var(--linea); border-radius:8px;
   padding:7px 1px 6px; text-align:center; min-height:68px; width:100%; overflow:hidden;
@@ -75,9 +80,7 @@ main[hidden]{display:none}
 .giorno i{font-style:normal; font-family:var(--mono); font-size:.52rem; line-height:1.2; color:var(--grafite); overflow-wrap:anywhere}
 .giorno.oggi-g{background:var(--inchiostro); border-color:var(--inchiostro); color:var(--crema)}
 .giorno.oggi-g b, .giorno.oggi-g i{color:rgba(247,243,233,.7)}
-.giorno.scelto-g{border:2px solid var(--lavoro); padding:6px 0 5px}
-.giorno.scelto-g b, .giorno.scelto-g i{color:var(--lavoro)}
-.giorno.scelto-g span{color:var(--lavoro)}
+.giorno .lettere{display:flex; gap:2px; justify-content:center}
 .giorno.riposo-g span{color:var(--grafite); font-weight:600}
 
 h3.sez{
@@ -133,11 +136,6 @@ h3.sez{
 .aiuto[open] summary::before{content:'– '}
 .aiuto p{font-family:var(--mono); font-size:.72rem; line-height:1.6; color:var(--grafite); margin-top:10px}
 .aiuto b{color:var(--inchiostro)}
-.nota-giorno{
-  display:flex; justify-content:space-between; align-items:center; gap:10px;
-  font-family:var(--mono); font-size:.7rem; color:var(--lavoro); margin:14px 0 -6px;
-}
-.nota-giorno button{font-family:var(--mono); font-size:.7rem; color:var(--inchiostro); border-bottom:1px solid var(--linea)}
 .storia{display:flex; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid rgba(22,24,27,.07); align-items:baseline}
 .storia b{font-size:.92rem; font-weight:700}
 .storia b i{display:block; font-style:normal; font-family:var(--mono); font-size:.66rem; color:var(--grafite); font-weight:400; margin-top:2px}

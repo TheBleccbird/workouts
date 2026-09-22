@@ -1,5 +1,5 @@
 /* ============ IMPOSTAZIONI ============ */
-const S = {voce:true, bip:true, modo:'auto', ritmo:1, fase:1, variante:1, voceNome:null, velocita:1};
+const S = {voce:true, bip:true, modo:'auto', ritmo:1, fase:1, voceNome:null, velocita:1};
 const store = {get: k => DB.get(k), set: (k, v) => DB.set(k, v).catch(() => {})};
 
 /* ---- migrazione dal vecchio localStorage (lg_*) ---- */
@@ -194,11 +194,11 @@ function aggiornaMedia(){
   const ms = navigator.mediaSession, s = R.q[R.i];
   try{
     const titolo = s.type === 'work' ? s.e.n
-      : s.type === 'rest' ? 'Riposo' + (s.next ? ' · poi ' + s.next.e.n : '')
+      : s.type === 'rest' ? (s.cambio ? 'Cambio' : 'Riposo') + (s.next ? ' · poi ' + s.next.e.n : '')
       : s.type === 'prep' ? 'Si parte' : 'Sessione completata';
     ms.metadata = new MediaMetadata({
       title: titolo,
-      artist: R.sess.nome + (s.n ? ' · esercizio ' + s.n + '/' + s.tot : ''),
+      artist: R.sess.nome + (s.es ? ' · esercizio ' + s.es + '/' + s.esTot : ''),
       album: 'Allenamento',
       artwork: [192, 512].map(n => ({src:'icons/icona-' + n + '.png', sizes:n + 'x' + n, type:'image/png'}))
     });
@@ -229,23 +229,29 @@ function parla(txt){
 function costruisci(sess){
   const q = [];
   q.push({type:'prep', dur:10});
+  // serie di fila: tutte le serie di un esercizio, poi il successivo
   sess.blocchi.forEach((b, bi) => {
-    for(let g = 1; g <= b.giri; g++){
-      b.esercizi.forEach((e, ei) => {
-        const dur = e.tipo === 'rip' ? Math.round(e.t * S.ritmo) : e.t;
-        q.push({type:'work', e, dur, giro:g, giri:b.giri, blocco:bi});
-        const ultimoEs = ei === b.esercizi.length - 1;
-        const ultimoGiro = g === b.giri;
-        const ultimoBlocco = bi === sess.blocchi.length - 1;
-        if(ultimoEs && ultimoGiro){
-          if(!ultimoBlocco) q.push({type:'rest', dur:b.riposoGiro || 60});
-        }else if(ultimoEs){
-          q.push({type:'rest', dur:b.riposoGiro, giroDopo:g + 1, giri:b.giri});
-        }else if(b.riposoEs > 0){
-          q.push({type:'rest', dur:b.riposoEs});
+    const ultimoBlocco = bi === sess.blocchi.length - 1;
+    b.esercizi.forEach((e, ei) => {
+      const dur = e.tipo === 'rip' ? Math.round(e.t * S.ritmo) : e.t;
+      const ultimoEs = ei === b.esercizi.length - 1;
+      for(let k = 1; k <= b.serie; k++){
+        q.push({type:'work', e, dur, serie:k, serieTot:b.serie, blocco:bi});
+        if(k < b.serie){
+          q.push({type:'rest', dur:b.riposoSerie, serieDopo:k + 1, serieTot:b.serie});
+          continue;
         }
-      });
-    }
+        // ultima serie: riposo prima dell'esercizio (o del blocco) che segue, più il tempo di cambio
+        const cambio = e.cambio || 0;
+        if(ultimoEs){
+          if(!ultimoBlocco) q.push({type:'rest', dur:(b.riposoSerie || 60) + cambio});
+        }else if(b.riposoEs > 0){
+          q.push({type:'rest', dur:b.riposoEs + cambio});
+        }else if(cambio > 0){
+          q.push({type:'rest', dur:cambio, cambio:true});
+        }
+      }
+    });
   });
   q.push({type:'done'});
   for(let i = 0; i < q.length; i++){
@@ -255,6 +261,10 @@ function costruisci(sess){
   }
   const lavori = q.filter(s => s.type === 'work');
   lavori.forEach((s, i) => { s.n = i + 1; s.tot = lavori.length; });
+  // numero dell'esercizio (le serie dello stesso esercizio condividono il numero)
+  let es = 0;
+  lavori.forEach((s, i) => { if(i === 0 || lavori[i - 1].e !== s.e) es++; s.es = es; });
+  lavori.forEach(s => { s.esTot = es; });
   return q;
 }
 
@@ -399,26 +409,26 @@ function vaiA(i, opz = {}){
   }
   else if(s.type === 'work'){
     const e = s.e;
-    el('stato').textContent = s.giri > 1 ? 'Giro ' + s.giro + ' di ' + s.giri : 'Lavoro';
+    el('stato').textContent = s.serieTot > 1 ? 'Serie ' + s.serie + ' di ' + s.serieTot : 'Lavoro';
     adattaNome(e.n);
     el('rip').textContent = e.r ? e.r : (e.tipo === 'rip' ? '' : formatta(e.t));
     el('nota').textContent = e.d || '';
     el('dopo').textContent = prossimoTesto(s);
-    el('pos').textContent = 'Esercizio ' + s.n + ' / ' + s.tot;
+    el('pos').textContent = 'Esercizio ' + s.es + ' / ' + s.esTot;
     if(!giaSuonato) bipVia();
     parla(e.n + (e.say ? ', ' + e.say : (e.tipo === 'rip' ? '' : ', ' + parlaTempo(e.t))) + '. Via.');
   }
   else if(s.type === 'rest'){
-    el('stato').textContent = 'Riposo';
+    el('stato').textContent = s.cambio ? 'Cambio' : 'Riposo';
     adattaNome(s.next ? s.next.e.n : 'Pausa');
     el('rip').textContent = s.next && s.next.e.r ? s.next.e.r : '';
     el('nota').textContent = s.next && s.next.e.d ? s.next.e.d : '';
-    el('dopo').textContent = s.giroDopo ? 'Poi giro ' + s.giroDopo + ' di ' + s.giri : 'Prossimo esercizio';
-    el('pos').textContent = 'Riposo ' + s.dur + '"';
+    el('dopo').textContent = s.serieDopo ? 'Poi serie ' + s.serieDopo + ' di ' + s.serieTot : 'Prossimo esercizio';
+    el('pos').textContent = (s.cambio ? 'Cambio ' : 'Riposo ') + s.dur + '"';
     if(!giaSuonato) bipStop();
-    let t = 'Riposo ' + s.dur + ' secondi.';
-    if(s.giroDopo) t += ' Poi giro ' + s.giroDopo + '.';
-    if(s.next) t += ' Prossimo: ' + s.next.e.n + (s.next.e.say ? ', ' + s.next.e.say : '') + '.';
+    let t = s.cambio ? 'Cambio.' : 'Riposo ' + s.dur + ' secondi.';
+    if(s.serieDopo) t += ' Poi serie ' + s.serieDopo + '.';
+    else if(s.next) t += ' Prossimo: ' + s.next.e.n + (s.next.e.say ? ', ' + s.next.e.say : '') + '.';
     parla(t);
   }
 
@@ -433,7 +443,7 @@ function vaiA(i, opz = {}){
 function prossimoTesto(s){
   for(let j = R.i + 1; j < R.q.length; j++){
     const x = R.q[j];
-    if(x.type === 'work') return 'Poi: ' + x.e.n;
+    if(x.type === 'work') return x.e === s.e ? 'Poi: serie ' + x.serie + ' di ' + x.serieTot : 'Poi: ' + x.e.n;
     if(x.type === 'done') return 'Ultimo esercizio';
   }
   return '';
@@ -525,6 +535,8 @@ function coloreBarra(){
    di riprendere; dopo 6 ore la registro come parziale.                    */
 const CHIAVE_RIPRESA = 'lg2_inCorso';
 const RIPRESA_MAX = 6 * 3600e3;
+// versione della coda: un indice salvato con una coda diversa (circuito → serie) non si riprende
+const RIPRESA_V = 2;
 
 function sessioneDaId(id){
   if(!id) return null;
@@ -541,7 +553,7 @@ function salvaRipresa(){
     localStorage.setItem(CHIAVE_RIPRESA, JSON.stringify({
       sessId:R.sess.id, poiId:R.poi ? R.poi.id : null, i:R.i, avvio:R.avvio,
       pausaTot:R.pausaTot + (R.inPausa ? ora - (R.pausaDa || ora) : 0),
-      fatti:[...R.fatti], riscMs:R.riscMs, riscAvvio:R.riscAvvio, ts:ora
+      fatti:[...R.fatti], riscMs:R.riscMs, riscAvvio:R.riscAvvio, ts:ora, v:RIPRESA_V
     }));
   }catch(e){}
 }
@@ -569,7 +581,7 @@ function archiviaRipresa(r){
 async function controllaRipresa(){
   const r = leggiRipresa();
   if(!r){ cancellaRipresa(); return; }
-  if(Date.now() - r.ts > RIPRESA_MAX) return archiviaRipresa(r);
+  if(Date.now() - r.ts > RIPRESA_MAX || r.v !== RIPRESA_V) return archiviaRipresa(r);
   const sess = sessioneDaId(r.sessId);
   const q = costruisci(sess);
   let w = q[Math.min(r.i, q.length - 1)];
@@ -580,7 +592,7 @@ async function controllaRipresa(){
   const quando = d.toDateString() === new Date().toDateString() ? 'alle ' + oraDi(d)
     : d.toDateString() === ieri.toDateString() ? 'ieri alle ' + oraDi(d) : dataBreve(d) + ' ' + oraDi(d);
   el('ripresa-testo').innerHTML = `<b>${esc(sess.nome)} interrotta ${quando}</b>`
-    + (w && w.type === 'work' ? `Riparti da ${esc(w.e.n)} · esercizio ${w.n}/${w.tot}${w.giri > 1 ? ', giro ' + w.giro + '/' + w.giri : ''}` : '');
+    + (w && w.type === 'work' ? `Riparti da ${esc(w.e.n)} · esercizio ${w.es}/${w.esTot}${w.serieTot > 1 ? ', serie ' + w.serie + '/' + w.serieTot : ''}` : '');
   el('btn-scarta').textContent = r.fatti.length ? 'Chiudi e salva' : 'Scarta';
   el('avviso-ripresa').hidden = false;
   el('btn-riprendi').onclick = () => { const x = leggiRipresa(); if(x) apri(sessioneDaId(x.sessId), opzRipresa(x)); };
@@ -656,7 +668,7 @@ function disegnaLista(){
   sessioniDisponibili().forEach(sess => {
     const c = document.createElement('div');
     c.className = 'card';
-    const es = sess.blocchi.flatMap(b => b.esercizi.map(e => ({e, giri:b.giri})));
+    const es = sess.blocchi.flatMap(b => b.esercizi.map(e => ({e, serie:b.serie})));
     c.innerHTML = `
       <button class="intestazione">
         <span class="nome"><strong>${sess.nome}</strong><em>${sess.sottotitolo} · ${sess.durata}</em></span>
@@ -664,10 +676,10 @@ function disegnaLista(){
       </button>
       <div class="dettaglio">
         <p class="nota">${sess.nota || ''}</p>
-        ${es.map(({e, giri}) => `
+        ${es.map(({e, serie}) => `
           <div class="riga">
             <span><a href="${yt(e.video || e.n)}" target="_blank" rel="noopener">${e.n}</a><i>${e.d || ''}</i></span>
-            <span class="val">${giri > 1 ? giri + ' × ' : ''}${e.r || formatta(e.t) + '"'}</span>
+            <span class="val">${serie > 1 ? serie + ' × ' : ''}${e.r || formatta(e.t) + '"'}</span>
           </div>`).join('')}
         ${sess.id.startsWith('sbarra') ? `
         <div class="fasi" role="group" aria-label="Fase sbarra">
@@ -687,74 +699,70 @@ function disegnaLista(){
   });
 }
 
-let giornoScelto = null;
 const NOMI_G = ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'];
-const oggiIdx = () => (new Date().getDay() + 6) % 7;
-const giornoAttivo = () => giornoScelto === null ? oggiIdx() : giornoScelto;
+const mezzanotte = d => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+// giorni di calendario tra la data e oggi (0 = oggi, 1 = ieri)
+const giorniDa = d => Math.round((mezzanotte(new Date()) - mezzanotte(new Date(d))) / 864e5);
+const SBARRA_OGNI = 3;   // la sbarra torna dopo almeno 3 giorni: presa e schiena recuperano
 
-function pezziGiorno(testo){
-  if(testo === 'Riposo') return {big:'—', sub:'riposo'};
-  if(testo === 'Camminata') return {big:'~', sub:'camm.'};
-  if(testo.includes('+')) return {big:testo[0], sub:'+ sbarra'};
-  return {big:testo, sub:'casa'};
-}
-
-function disegnaSettimana(){
-  const oggi = oggiIdx(), att = giornoAttivo();
-  el('settimana').innerHTML = SETTIMANA.map((d, i) => {
-    const testo = S.variante === 1 ? d.v1 : d.v2;
-    const p = pezziGiorno(testo);
-    const cls = [i === oggi ? 'oggi-g' : '', i === att && giornoScelto !== null ? 'scelto-g' : '', testo === 'Riposo' ? 'riposo-g' : ''].join(' ');
-    return `<button class="giorno ${cls}" data-g="${i}" aria-label="${NOMI_G[i]}, ${testo}">
-      <b>${d.g}</b><span>${p.big}</span><i>${p.sub}</i></button>`;
-  }).join('');
-  el('settimana').querySelectorAll('[data-g]').forEach(b => b.onclick = () => {
-    const i = +b.dataset.g;
-    giornoScelto = (giornoScelto === i || (giornoScelto === null && i === oggiIdx())) ? null : i;
-    disegnaOggi(); disegnaSettimana();
-  });
+/* ---- rotazione: dopo la A viene la B e viceversa, in qualunque giorno ----
+   Le parziali contano come fatte: non si recupera quello che si salta.   */
+function prossimaSessione(){
+  const ultima = LOG.find(x => x.tipo === 'A' || x.tipo === 'B') || null;
+  const sbarra = LOG.find(x => x.tipo === 'sbarra') || null;
+  return {
+    sess: ultima && ultima.tipo === 'A' ? SESS_B : SESS_A,
+    ultima,
+    giorni: ultima ? giorniDa(ultima.d) : null,
+    conSbarra: !sbarra || giorniDa(sbarra.d) >= SBARRA_OGNI
+  };
 }
 
 function disegnaOggi(){
-  const i = giornoAttivo();
-  const testo = S.variante === 1 ? SETTIMANA[i].v1 : SETTIMANA[i].v2;
-  el('oggi-giorno').textContent = giornoScelto === null ? 'Oggi · ' + NOMI_G[i].toLowerCase() : NOMI_G[i];
-  el('btn-settimana').textContent = 'Settimana ' + S.variante;
-
-  const nota = el('nota-giorno');
-  if(giornoScelto !== null && giornoScelto !== oggiIdx()){
-    nota.hidden = false;
-    nota.innerHTML = `<span>Stai guardando ${NOMI_G[i].toLowerCase()}, oggi è ${NOMI_G[oggiIdx()].toLowerCase()}</span><button id="reset-g">Torna a oggi</button>`;
-    el('reset-g').onclick = () => { giornoScelto = null; disegnaOggi(); disegnaSettimana(); };
-  }else{
-    nota.hidden = true;
-  }
-
+  const {sess, ultima, giorni, conSbarra} = prossimaSessione();
   const btn = el('oggi-vai'), sec = el('oggi-secondo');
   sec.hidden = true;
-  if(testo === 'Riposo'){
+  if(giorni !== null && giorni <= 1){
+    // A e B lavorano entrambe sulle gambe: tra una e l'altra serve un giorno di riposo
+    const fatta = ultima.tipo === 'A' ? 'la Sessione A' : 'la Sessione B';
+    el('oggi-giorno').textContent = giorni === 0 ? 'Oggi · fatto' : 'Oggi · riposo consigliato';
     el('oggi-titolo').textContent = 'Riposo';
-    el('oggi-durata').textContent = 'Cammina se ti va. Oppure scegli un altro giorno qui sotto.';
-    btn.textContent = 'Fai lo stretching';
+    el('oggi-durata').textContent = giorni === 0
+      ? `Oggi hai già fatto ${fatta}. La ${sess.id} domani o dopodomani.`
+      : `Ieri hai fatto ${fatta}: meglio un giorno di riposo prima della ${sess.id}, le gambe devono recuperare. Intanto cammina 30-40 min o fai il defaticamento.`;
+    btn.textContent = 'Fai il defaticamento';
     btn.onclick = () => apri(STRETCH);
-  }else if(testo === 'Camminata'){
-    el('oggi-titolo').textContent = 'Camminata';
-    el('oggi-durata').textContent = '30-40 min · circa 8000 passi al giorno';
-    btn.textContent = 'Fai lo stretching';
-    btn.onclick = () => apri(STRETCH);
-  }else{
-    const sess = testo.startsWith('A') ? SESS_A : SESS_B;
-    const conSbarra = testo.includes('Sbarra');
-    el('oggi-titolo').textContent = sess.nome + (conSbarra ? ' + sbarra' : '');
-    el('oggi-durata').textContent = conSbarra ? 'Riscaldamento, casa, parco · ~70 min' : sess.sottotitolo + ' · ' + sess.durata;
-    btn.textContent = 'Inizia dal riscaldamento';
-    btn.onclick = () => apri(RISC, {poi:sess});
-    if(conSbarra){
-      sec.hidden = false;
-      sec.textContent = 'Vai diretto alla sbarra · fase ' + S.fase;
-      sec.onclick = () => apri(sbarraSess(S.fase));
-    }
+    sec.hidden = false;
+    sec.textContent = 'Fai comunque la ' + sess.nome;
+    sec.onclick = () => apri(RISC, {poi:sess});
+    return;
   }
+  el('oggi-giorno').textContent = giorni === null ? 'Si comincia'
+    : 'Prossima · ultima ' + (giorni === 2 ? "l'altro ieri" : giorni + ' giorni fa');
+  el('oggi-titolo').textContent = sess.nome + (conSbarra ? ' + sbarra' : '');
+  el('oggi-durata').textContent = conSbarra ? 'Riscaldamento, casa, parco · ~70 min' : sess.sottotitolo + ' · ' + sess.durata;
+  btn.textContent = 'Inizia dal riscaldamento';
+  btn.onclick = () => apri(RISC, {poi:sess});
+  if(conSbarra){
+    sec.hidden = false;
+    sec.textContent = 'Vai diretto alla sbarra · fase ' + S.fase;
+    sec.onclick = () => apri(sbarraSess(S.fase));
+  }
+}
+
+// ultimi 7 giorni, fino a oggi: cosa hai fatto ogni giorno
+function disegnaUltimi(){
+  const giorni = perGiorno(), oggi = new Date();
+  el('settimana').innerHTML = [6, 5, 4, 3, 2, 1, 0].map(n => {
+    const d = piu(oggi, -n);
+    const voci = (giorni.get(chiaveGiorno(d)) || []).filter(x => ['A', 'B', 'sbarra'].includes(x.tipo));
+    const tipi = ORDINE_TIPI.filter(t => voci.some(x => x.tipo === t));
+    const nome = NOMI_G[(d.getDay() + 6) % 7];
+    const cls = [n === 0 ? 'oggi-g' : '', tipi.length ? '' : 'riposo-g'].join(' ');
+    const lettere = tipi.length ? tipi.map(t => `<span style="color:${TIPI[t].col}">${TIPI[t].lettera}</span>`).join('') : '<span>—</span>';
+    return `<div class="giorno ${cls}" aria-label="${nome} ${dataBreve(d)}: ${tipi.length ? tipi.map(t => TIPI[t].nome).join(', ') : 'niente'}">
+      <b>${nome.slice(0, 3).toUpperCase()}</b><span class="lettere">${lettere}</span><i>${n === 0 ? 'oggi' : d.getDate()}</i></div>`;
+  }).join('');
 }
 
 /* impostazioni */
@@ -791,8 +799,6 @@ el('sel-voce').onchange = e => {
 };
 el('prova').onclick = () => { initAudio(); scegliVoce(); bipVia(); parla('Goblet squat, 15 ripetizioni. Via.'); };
 
-el('btn-settimana').onclick = () => { S.variante = S.variante === 1 ? 2 : 1; store.set('variante', S.variante); disegnaOggi(); disegnaSettimana(); };
-
 // registra la sessione corrente; parziale = interrotta prima della fine
 async function salvaFatto(parziale){
   if(R.salvato) return;
@@ -807,18 +813,18 @@ async function salvaFatto(parziale){
     inizio: new Date(R.riscAvvio || R.avvio).toISOString(),
     sessId: R.sess.id, nome: R.sess.nome, tipo: tipoSess(R.sess.id), fase: faseSess(R.sess.id),
     min: Math.max(1, Math.round((tempoEffettivo() + R.riscMs) / 60000)),
-    esercizi, eserciziTot: lavori.length, parziale, v:2
+    esercizi, eserciziTot: lavori.length, parziale, v:3
   };
   if(R.riscMs) rec.conRisc = true;
   if(parziale){
-    // ultimo esercizio raggiunto: da lì ricavo blocco e giro
+    // ultimo esercizio raggiunto: da lì ricavo blocco e serie
     let j = R.i;
     while(j > 0 && R.q[j].type !== 'work') j--;
     const w = R.q[j];
     if(w && w.type === 'work'){
       const b = R.sess.blocchi[w.blocco];
       rec.arrivo = {blocco:w.blocco + 1, blocchi:R.sess.blocchi.length, titolo:b.titolo || null,
-                    giro:w.giro, giri:w.giri, esercizio:w.n};
+                    serie:w.serie, serieTot:w.serieTot, esercizio:w.es};
     }
   }
   try{ await DB.metti('sessioni', rec); }catch(e){}
@@ -835,7 +841,7 @@ async function segnaFase(fase){
 (async () => {
   await DB.apri();
   await migraVecchioStorage();
-  for(const k of ['voce','bip','modo','ritmo','fase','variante','voceNome','velocita']){
+  for(const k of ['voce','bip','modo','ritmo','fase','voceNome','velocita']){
     const v = await store.get(k);
     if(v !== null && v !== undefined) S[k] = v;
   }
@@ -853,7 +859,7 @@ async function segnaFase(fase){
   if(!FASI.length) segnaFase(S.fase);
   await controllaRipresa();
   DB.persistente().then(p => { PERSISTENTE = p; disegnaStatoDati(); });
-  disegnaOggi(); disegnaSettimana(); disegnaLista(); disegnaStorico();
+  disegnaLista(); disegnaStorico();
   initStorico();
   const riadatta = () => { if(runEl.classList.contains('on')) adattaNome(el('nome').textContent); };
   window.addEventListener('resize', riadatta);

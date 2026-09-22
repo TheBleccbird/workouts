@@ -8,10 +8,10 @@ PWA per allenamento guidato a voce (casa + parco + sbarra). File statici, nessun
 |---|---|
 | `index.html` | markup di home, storico e schermo di allenamento |
 | `app.css` | stile, font locali |
-| `data.js` | il piano: sessioni, esercizi, fasi della sbarra, settimana |
+| `data.js` | il piano: sessioni, esercizi (serie, riposi, tempi di cambio), fasi della sbarra |
 | `db.js` | archivio IndexedDB (ripiego su localStorage) |
 | `storico.js` | schermata Storico, esporta/importa |
-| `app.js` | motore dei timer, audio, voce, ripresa, home |
+| `app.js` | motore dei timer, audio, voce, ripresa, home con rotazione A/B |
 | `sw.js` | service worker: precache e funzionamento offline |
 | `manifest.webmanifest`, `icons/`, `fonts/` | installazione come app |
 
