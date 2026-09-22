@@ -19,7 +19,7 @@
 <main id="home">
   <div class="top">
     <h1>Piano di allenamento</h1>
-    <span class="eyebrow">Casa + Parco</span>
+    <a class="apri-imp" href="#impostazioni">Impostazioni</a>
   </div>
 
   <div class="avviso" id="avviso-agg" hidden>
@@ -37,8 +37,7 @@
 
   <section class="oggi">
     <div class="oggi-top">
-      <span class="eyebrow" id="oggi-giorno">Oggi</span>
-      <button class="mini" id="btn-settimana">Settimana 1</button>
+      <span class="eyebrow" id="oggi-giorno">Prossima</span>
     </div>
     <h2 id="oggi-titolo">—</h2>
     <p id="oggi-durata">—</p>
@@ -46,7 +45,7 @@
     <button class="vai ghost" id="oggi-secondo" hidden>Poi la sbarra</button>
   </section>
 
-  <p class="nota-giorno" id="nota-giorno" hidden></p>
+  <h3 class="sez" style="margin-top:22px">Ultimi 7 giorni</h3>
   <div class="settimana" id="settimana"></div>
 
   <h3 class="sez">Sessioni</h3>
@@ -56,7 +55,20 @@
   <div id="storico"></div>
   <a class="apri-storico" href="#storico">Apri lo storico completo ›</a>
 
-  <h3 class="sez" style="margin-top:26px">Audio e timer</h3>
+  <p class="pie">
+    Tieni il telefono in tasca: la voce ti dice cosa fare.<br>
+    Un tocco sul nome di un esercizio apre i video su YouTube.<br>
+    Non sostituisce il parere di un medico.
+  </p>
+</main>
+
+<main id="vista-impostazioni" hidden>
+  <div class="top">
+    <a class="indietro" href="#">‹ Piano</a>
+    <span class="eyebrow">Impostazioni</span>
+  </div>
+
+  <h3 class="sez">Audio e timer</h3>
   <div class="imp">
     <p>Voce guida<i>Annuncia esercizio, riposo e prossimo</i></p>
     <button class="switch" id="sw-voce" aria-pressed="true" aria-label="Voce guida"></button>
@@ -103,11 +115,6 @@
     <button class="segmento" id="prova" style="border:1px solid var(--linea); background:var(--carta); border-radius:7px; padding:8px 11px; font-family:var(--mono); font-size:.72rem">Prova</button>
   </div>
 
-  <p class="pie">
-    Tieni il telefono in tasca: la voce ti dice cosa fare.<br>
-    Un tocco sul nome di un esercizio apre i video su YouTube.<br>
-    Non sostituisce il parere di un medico.
-  </p>
 </main>
 
 <main id="vista-storico" hidden>
